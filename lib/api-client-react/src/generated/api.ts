@@ -5,18 +5,33 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  AddDomainBody,
+  Domain,
+  DomainList,
+  EmailDetail,
+  EmailList,
+  EmailStats,
+  ErrorResponse,
+  GetEmailParams,
+  GetEmailStatsParams,
+  HealthStatus,
+  ListEmailsParams,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +107,544 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Fetches emails for a given email address using a mail service
+ * @summary List emails for an address
+ */
+export const getListEmailsUrl = (params: ListEmailsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/emails?${stringifiedParams}`
+    : `/api/emails`;
+};
+
+export const listEmails = async (
+  params: ListEmailsParams,
+  options?: RequestInit,
+): Promise<EmailList> => {
+  return customFetch<EmailList>(getListEmailsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEmailsQueryKey = (params?: ListEmailsParams) => {
+  return [`/api/emails`, ...(params ? [params] : [])] as const;
+};
+
+export const getListEmailsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEmails>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: ListEmailsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listEmails>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEmailsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmails>>> = ({
+    signal,
+  }) => listEmails(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEmails>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListEmailsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listEmails>>
+>;
+export type ListEmailsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List emails for an address
+ */
+
+export function useListEmails<
+  TData = Awaited<ReturnType<typeof listEmails>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: ListEmailsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listEmails>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListEmailsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Fetches the full content of an email by its ID
+ * @summary Get email details
+ */
+export const getGetEmailUrl = (id: string, params: GetEmailParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/emails/${id}?${stringifiedParams}`
+    : `/api/emails/${id}`;
+};
+
+export const getEmail = async (
+  id: string,
+  params: GetEmailParams,
+  options?: RequestInit,
+): Promise<EmailDetail> => {
+  return customFetch<EmailDetail>(getGetEmailUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEmailQueryKey = (id: string, params?: GetEmailParams) => {
+  return [`/api/emails/${id}`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetEmailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEmail>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  params: GetEmailParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEmail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEmailQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmail>>> = ({
+    signal,
+  }) => getEmail(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEmail>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetEmailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEmail>>
+>;
+export type GetEmailQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get email details
+ */
+
+export function useGetEmail<
+  TData = Awaited<ReturnType<typeof getEmail>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  params: GetEmailParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEmail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetEmailQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the list of configured domains available for use
+ * @summary List available domains
+ */
+export const getListDomainsUrl = () => {
+  return `/api/domains`;
+};
+
+export const listDomains = async (
+  options?: RequestInit,
+): Promise<DomainList> => {
+  return customFetch<DomainList>(getListDomainsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDomainsQueryKey = () => {
+  return [`/api/domains`] as const;
+};
+
+export const getListDomainsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDomains>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDomains>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDomainsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDomains>>> = ({
+    signal,
+  }) => listDomains({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDomains>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDomainsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDomains>>
+>;
+export type ListDomainsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List available domains
+ */
+
+export function useListDomains<
+  TData = Awaited<ReturnType<typeof listDomains>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDomains>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDomainsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Add a custom domain for receiving email
+ * @summary Add a domain
+ */
+export const getAddDomainUrl = () => {
+  return `/api/domains`;
+};
+
+export const addDomain = async (
+  addDomainBody: AddDomainBody,
+  options?: RequestInit,
+): Promise<Domain> => {
+  return customFetch<Domain>(getAddDomainUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addDomainBody),
+  });
+};
+
+export const getAddDomainMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addDomain>>,
+    TError,
+    { data: BodyType<AddDomainBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addDomain>>,
+  TError,
+  { data: BodyType<AddDomainBody> },
+  TContext
+> => {
+  const mutationKey = ["addDomain"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addDomain>>,
+    { data: BodyType<AddDomainBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addDomain(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddDomainMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addDomain>>
+>;
+export type AddDomainMutationBody = BodyType<AddDomainBody>;
+export type AddDomainMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Add a domain
+ */
+export const useAddDomain = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addDomain>>,
+    TError,
+    { data: BodyType<AddDomainBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addDomain>>,
+  TError,
+  { data: BodyType<AddDomainBody> },
+  TContext
+> => {
+  return useMutation(getAddDomainMutationOptions(options));
+};
+
+/**
+ * @summary Remove a domain
+ */
+export const getDeleteDomainUrl = (id: number) => {
+  return `/api/domains/${id}`;
+};
+
+export const deleteDomain = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteDomainUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDomainMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDomain>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDomain>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteDomain"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDomain>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteDomain(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDomainMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDomain>>
+>;
+
+export type DeleteDomainMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Remove a domain
+ */
+export const useDeleteDomain = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDomain>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDomain>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteDomainMutationOptions(options));
+};
+
+/**
+ * Returns counts of emails checked and received
+ * @summary Get email statistics
+ */
+export const getGetEmailStatsUrl = (params: GetEmailStatsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/emails/stats?${stringifiedParams}`
+    : `/api/emails/stats`;
+};
+
+export const getEmailStats = async (
+  params: GetEmailStatsParams,
+  options?: RequestInit,
+): Promise<EmailStats> => {
+  return customFetch<EmailStats>(getGetEmailStatsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEmailStatsQueryKey = (params?: GetEmailStatsParams) => {
+  return [`/api/emails/stats`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetEmailStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEmailStats>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetEmailStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEmailStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEmailStatsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmailStats>>> = ({
+    signal,
+  }) => getEmailStats(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEmailStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetEmailStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEmailStats>>
+>;
+export type GetEmailStatsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get email statistics
+ */
+
+export function useGetEmailStats<
+  TData = Awaited<ReturnType<typeof getEmailStats>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetEmailStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEmailStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetEmailStatsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

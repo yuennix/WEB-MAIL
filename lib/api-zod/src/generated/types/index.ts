@@ -6,4 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./addDomainBody";
+export * from "./domain";
+export * from "./domainList";
+export * from "./emailDetail";
+export * from "./emailDetailAttachmentsItem";
+export * from "./emailList";
+export * from "./emailStats";
+export * from "./emailSummary";
+export * from "./errorResponse";
+export * from "./getEmailParams";
+export * from "./getEmailStatsParams";
 export * from "./healthStatus";
+export * from "./listEmailsParams";

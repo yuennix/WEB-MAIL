@@ -14,3 +14,108 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Fetches emails for a given email address using a mail service
+ * @summary List emails for an address
+ */
+export const listEmailsQueryPageDefault = 1;
+
+export const ListEmailsQueryParams = zod.object({
+  address: zod.coerce
+    .string()
+    .describe("The email address to fetch emails for"),
+  page: zod.coerce.number().default(listEmailsQueryPageDefault),
+});
+
+export const ListEmailsResponse = zod.object({
+  emails: zod.array(
+    zod.object({
+      id: zod.string(),
+      from: zod.string(),
+      subject: zod.string(),
+      date: zod.string(),
+      read: zod.boolean(),
+      preview: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  totalPages: zod.number(),
+});
+
+/**
+ * Fetches the full content of an email by its ID
+ * @summary Get email details
+ */
+export const GetEmailParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetEmailQueryParams = zod.object({
+  address: zod.coerce.string(),
+});
+
+export const GetEmailResponse = zod.object({
+  id: zod.string(),
+  from: zod.string(),
+  to: zod.string(),
+  subject: zod.string(),
+  date: zod.string(),
+  htmlBody: zod.string().optional(),
+  textBody: zod.string().optional(),
+  read: zod.boolean(),
+  attachments: zod
+    .array(
+      zod.object({
+        filename: zod.string(),
+        size: zod.number(),
+        contentType: zod.string(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * Returns the list of configured domains available for use
+ * @summary List available domains
+ */
+export const ListDomainsResponse = zod.object({
+  domains: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      createdAt: zod.string(),
+      active: zod.boolean(),
+    }),
+  ),
+});
+
+/**
+ * Add a custom domain for receiving email
+ * @summary Add a domain
+ */
+export const AddDomainBody = zod.object({
+  name: zod.string(),
+});
+
+/**
+ * @summary Remove a domain
+ */
+export const DeleteDomainParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * Returns counts of emails checked and received
+ * @summary Get email statistics
+ */
+export const GetEmailStatsQueryParams = zod.object({
+  address: zod.coerce.string(),
+});
+
+export const GetEmailStatsResponse = zod.object({
+  totalEmails: zod.number(),
+  unreadEmails: zod.number(),
+  lastChecked: zod.string().optional(),
+});
