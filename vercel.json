@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm install && pnpm --filter @workspace/webmail run build",
+  "outputDirectory": "artifacts/webmail/dist/public",
+  "framework": null,
+  "installCommand": "pnpm install"
+}
