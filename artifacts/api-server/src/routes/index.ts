@@ -7,6 +7,7 @@ import testRouter from "./test";
 import eventsRouter from "./events";
 import usersRouter from "./users";
 import adminRouter from "./admin";
+import tempMailRouter from "./temp-mail";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(testRouter);
 router.use(eventsRouter);
 router.use(usersRouter);
 router.use(adminRouter);
+router.use(tempMailRouter);
 
 export default router;

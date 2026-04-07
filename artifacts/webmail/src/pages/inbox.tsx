@@ -87,9 +87,46 @@ export function InboxPage() {
     }
   );
 
+  // Sync messages from temp-mail.io if address is registered there
+  const syncTempMail = useCallback(async (address: string) => {
+    try {
+      const syncRes = await fetch(`${apiBase}/api/temp-mail/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const syncData = await syncRes.json();
+      if (syncData.ok && syncData.added > 0) refetchEmails();
+    } catch {
+      // Silently ignore — not a temp-mail address or network error
+    }
+  }, [refetchEmails]);
+
+  // When inbox changes, try to register it on temp-mail.io and sync messages
+  useEffect(() => {
+    if (!activeAddress) return;
+    const registerAndSync = async () => {
+      try {
+        const regRes = await fetch(`${apiBase}/api/temp-mail/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ address: activeAddress }),
+        });
+        const regData = await regRes.json();
+        if (regData.ok) await syncTempMail(activeAddress);
+      } catch {
+        // Not a temp-mail domain — fine, webhook handles it
+      }
+    };
+    registerAndSync();
+  }, [activeAddress, syncTempMail]);
+
   const doRefetch = useCallback(() => {
-    if (activeAddress) refetchEmails();
-  }, [activeAddress, refetchEmails]);
+    if (activeAddress) {
+      refetchEmails();
+      syncTempMail(activeAddress);
+    }
+  }, [activeAddress, refetchEmails, syncTempMail]);
 
   useEffect(() => {
     if (!autoRefresh || !activeAddress) return;
