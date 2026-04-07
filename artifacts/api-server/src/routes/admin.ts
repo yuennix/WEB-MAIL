@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
+import { createClerkClient } from "@clerk/backend";
 
 const router: IRouter = Router();
 
@@ -96,6 +97,66 @@ router.patch("/admin/users/:id/tier", checkAdminPassword, async (req, res): Prom
   }
 
   res.json({ id: updated.id, tier: updated.tier, premiumExpiresAt: updated.premiumExpiresAt });
+});
+
+router.post("/admin/sync-from-clerk", checkAdminPassword, async (_req, res): Promise<void> => {
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  if (!secretKey) {
+    res.status(500).json({ error: "CLERK_SECRET_KEY not configured on server" });
+    return;
+  }
+
+  const clerkClient = createClerkClient({ secretKey });
+
+  // Fetch all users from Clerk (paginate if needed)
+  let allClerkUsers: { id: string; emailAddresses: { emailAddress: string }[]; username: string | null }[] = [];
+  let offset = 0;
+  const limit = 100;
+  while (true) {
+    const page = await clerkClient.users.getUserList({ limit, offset });
+    allClerkUsers = allClerkUsers.concat(
+      page.data.map((u) => ({
+        id: u.id,
+        emailAddresses: u.emailAddresses.map((e) => ({ emailAddress: e.emailAddress })),
+        username: u.username ?? null,
+      }))
+    );
+    if (page.data.length < limit) break;
+    offset += limit;
+  }
+
+  let created = 0;
+  let skipped = 0;
+
+  // Check if DB is empty (first user auto-promoted)
+  const [{ count: dbCount }] = await db.select({ count: count() }).from(usersTable);
+  const isEmpty = Number(dbCount) === 0;
+
+  for (const clerkUser of allClerkUsers) {
+    const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+    const username = clerkUser.username ?? null;
+
+    const [existing] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, clerkUser.id));
+
+    if (existing) {
+      skipped++;
+    } else {
+      const isFirst = isEmpty && created === 0;
+      await db.insert(usersTable).values({
+        clerkId: clerkUser.id,
+        email,
+        username,
+        tier: isFirst ? "premium" : "free",
+        isAdmin: isFirst,
+      });
+      created++;
+    }
+  }
+
+  res.json({ ok: true, total: allClerkUsers.length, created, skipped });
 });
 
 router.delete("/admin/users/:id", checkAdminPassword, async (req, res): Promise<void> => {

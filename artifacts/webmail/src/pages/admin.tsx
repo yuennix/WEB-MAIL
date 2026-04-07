@@ -52,6 +52,8 @@ export function AdminPage() {
   const [fetching, setFetching] = useState(false);
   const [updating, setUpdating] = useState<number | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<Record<number, string>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
 
   const storedPassword = (): string => sessionStorage.getItem(SESSION_KEY) ?? "";
 
@@ -133,6 +135,28 @@ export function AdminPage() {
       });
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const syncFromClerk = async () => {
+    setSyncing(true);
+    setSyncMsg("");
+    try {
+      const res = await fetch(`${apiBase}/api/admin/sync-from-clerk`, {
+        method: "POST",
+        headers: { "x-admin-password": storedPassword() },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncMsg(`Synced: ${data.created} new, ${data.skipped} already existed`);
+        fetchUsers();
+      } else {
+        setSyncMsg(data.error ?? "Sync failed");
+      }
+    } catch {
+      setSyncMsg("Could not reach server");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -226,7 +250,17 @@ export function AdminPage() {
           <Shield className="w-6 h-6 text-violet-600" />
           <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={syncFromClerk}
+            disabled={syncing || fetching}
+            className="text-violet-700 border-violet-300 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-800 dark:hover:bg-violet-900/20"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing…" : "Sync from Clerk"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => fetchUsers()} disabled={fetching}>
             <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
             Refresh
@@ -236,6 +270,16 @@ export function AdminPage() {
           </Button>
         </div>
       </div>
+
+      {syncMsg && (
+        <div className={`text-sm px-4 py-2 rounded-lg border ${
+          syncMsg.startsWith("Synced")
+            ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
+            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+        }`}>
+          {syncMsg}
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
