@@ -87,45 +87,8 @@ export function InboxPage() {
     }
   );
 
-  // Helper: call temp-mail sync and refetch if new messages arrived
-  const syncTempMailAddr = async (address: string) => {
-    try {
-      const res = await fetch(`${apiBase}/api/temp-mail/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address }),
-      });
-      const data = await res.json();
-      if (data.ok && data.added > 0) refetchEmails();
-    } catch { /* silently ignore */ }
-  };
-
-  // When inbox address changes: register on temp-mail.io once, then do initial sync
-  // Only depends on activeAddress to avoid effect loops
-  useEffect(() => {
-    if (!activeAddress) return;
-    let cancelled = false;
-    const run = async () => {
-      try {
-        const regRes = await fetch(`${apiBase}/api/temp-mail/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: activeAddress }),
-        });
-        const regData = await regRes.json();
-        if (!cancelled && regData.ok) await syncTempMailAddr(activeAddress);
-      } catch { /* not a temp-mail domain — webhook handles it */ }
-    };
-    run();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeAddress]);
-
   const doRefetch = useCallback(() => {
-    if (!activeAddress) return;
-    refetchEmails();
-    syncTempMailAddr(activeAddress);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (activeAddress) refetchEmails();
   }, [activeAddress, refetchEmails]);
 
   useEffect(() => {
