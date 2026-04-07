@@ -1,15 +1,15 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-async function requireAdmin(req: any, res: any, next: any) {
-  const clerkId = req.clerkUserId as string;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId));
-  if (!user?.isAdmin) {
-    res.status(403).json({ error: "Forbidden" });
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "maildrop-admin-2024";
+
+function checkAdminPassword(req: any, res: any, next: any) {
+  const pwd = req.headers["x-admin-password"] as string | undefined;
+  if (!pwd || pwd !== ADMIN_PASSWORD) {
+    res.status(403).json({ error: "Invalid admin password" });
     return;
   }
   next();
@@ -32,7 +32,16 @@ function durationToDate(duration: string): Date | null {
   return null;
 }
 
-router.get("/admin/users", requireAuth, requireAdmin, async (_req, res): Promise<void> => {
+router.post("/admin/auth", (req, res): void => {
+  const { password } = req.body as { password?: string };
+  if (!password || password !== ADMIN_PASSWORD) {
+    res.status(401).json({ error: "Wrong password" });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+router.get("/admin/users", checkAdminPassword, async (_req, res): Promise<void> => {
   const users = await db
     .select()
     .from(usersTable)
@@ -61,7 +70,7 @@ router.get("/admin/users", requireAuth, requireAdmin, async (_req, res): Promise
   res.json({ users: mapped, stats: { total, premium, free } });
 });
 
-router.patch("/admin/users/:id/tier", requireAuth, requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/users/:id/tier", checkAdminPassword, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const { tier, duration } = req.body as { tier: string; duration?: string };
 
@@ -87,24 +96,6 @@ router.patch("/admin/users/:id/tier", requireAuth, requireAdmin, async (req, res
   }
 
   res.json({ id: updated.id, tier: updated.tier, premiumExpiresAt: updated.premiumExpiresAt });
-});
-
-router.patch("/admin/users/:id/admin", requireAuth, requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  const { isAdmin } = req.body as { isAdmin: boolean };
-
-  const [updated] = await db
-    .update(usersTable)
-    .set({ isAdmin })
-    .where(eq(usersTable.id, id))
-    .returning();
-
-  if (!updated) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
-
-  res.json({ id: updated.id, isAdmin: updated.isAdmin });
 });
 
 export default router;

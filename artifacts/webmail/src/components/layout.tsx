@@ -90,12 +90,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+              <Shield className="w-4 h-4" /> Admin
+            </Link>
             <Show when="signed-in">
-              {isAdmin && (
-                <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-                  <Shield className="w-4 h-4" /> Admin
-                </Link>
-              )}
               <div className="px-3 py-2 flex items-center gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{user?.firstName || user?.username}</p>
@@ -151,22 +149,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-          <Show when="signed-in">
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                  location === "/admin"
-                    ? "bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Shield className="w-4 h-4" />
-                Admin
-                {location === "/admin" && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-500" />}
-              </Link>
-            )}
-          </Show>
+          <Link
+            href="/admin"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
+              location === "/admin"
+                ? "bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Admin
+            {location === "/admin" && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-500" />}
+          </Link>
         </nav>
 
         {/* User / Auth Footer */}

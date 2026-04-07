@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useUserTier } from "@/hooks/use-user-tier";
 import { Button } from "@/components/ui/button";
-import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck } from "lucide-react";
-import { useLocation } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff } from "lucide-react";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
+const SESSION_KEY = "maildrop-admin-auth";
 
 interface AdminUser {
   id: number;
@@ -41,18 +41,58 @@ function formatExpiry(expiresAt: string | null): string {
 }
 
 export function AdminPage() {
-  const { isAdmin, loading } = useUserTier();
-  const [, setLocation] = useLocation();
+  const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, premium: 0, free: 0 });
   const [fetching, setFetching] = useState(false);
   const [updating, setUpdating] = useState<number | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<Record<number, string>>({});
 
-  const fetchUsers = async () => {
+  const storedPassword = (): string => sessionStorage.getItem(SESSION_KEY) ?? "";
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    if (saved) {
+      setAuthenticated(true);
+      fetchUsers(saved);
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await fetch(`${apiBase}/api/admin/auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        sessionStorage.setItem(SESSION_KEY, password);
+        setAuthenticated(true);
+        fetchUsers(password);
+      } else {
+        setAuthError("Wrong password. Try again.");
+      }
+    } catch {
+      setAuthError("Could not connect. Try again.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const fetchUsers = async (pwd?: string) => {
     setFetching(true);
     try {
-      const res = await fetch(`${apiBase}/api/admin/users`, { credentials: "include" });
+      const res = await fetch(`${apiBase}/api/admin/users`, {
+        headers: { "x-admin-password": pwd ?? storedPassword() },
+      });
       const data = await res.json();
       setUsers(data.users ?? []);
       if (data.stats) setStats(data.stats);
@@ -61,22 +101,16 @@ export function AdminPage() {
     }
   };
 
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      setLocation("/");
-    } else if (!loading && isAdmin) {
-      fetchUsers();
-    }
-  }, [loading, isAdmin]);
-
   const setTier = async (userId: number, tier: string) => {
     setUpdating(userId);
     const duration = selectedDuration[userId] || "7d";
     try {
       const res = await fetch(`${apiBase}/api/admin/users/${userId}/tier`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": storedPassword(),
+        },
         body: JSON.stringify({ tier, duration: tier === "premium" ? duration : undefined }),
       });
       const updated = await res.json();
@@ -102,10 +136,62 @@ export function AdminPage() {
     }
   };
 
-  if (loading) {
+  const handleSignOut = () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setAuthenticated(false);
+    setPassword("");
+    setUsers([]);
+  };
+
+  if (!authenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mx-auto shadow-lg">
+              <Lock className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+            <p className="text-sm text-muted-foreground">Enter the admin password to continue</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="relative">
+              <Input
+                type={showPwd ? "text" : "password"}
+                placeholder="Admin password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 pr-10"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(!showPwd)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {authError && (
+              <p className="text-sm text-red-500 text-center">{authError}</p>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white"
+              disabled={authLoading || !password}
+            >
+              {authLoading ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Shield className="w-4 h-4 mr-2" />
+              )}
+              {authLoading ? "Verifying…" : "Enter Admin Panel"}
+            </Button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -118,10 +204,15 @@ export function AdminPage() {
           <Shield className="w-6 h-6 text-violet-600" />
           <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchUsers} disabled={fetching}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => fetchUsers()} disabled={fetching}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground">
+            Sign out
+          </Button>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -165,13 +256,12 @@ export function AdminPage() {
 
         {users.length === 0 ? (
           <div className="p-10 text-center text-muted-foreground">
-            {fetching ? "Loading..." : "No users yet."}
+            {fetching ? "Loading…" : "No users yet."}
           </div>
         ) : (
           <div className="divide-y divide-border">
             {users.map((u) => (
               <div key={u.id} className="flex items-center gap-4 px-5 py-4 flex-wrap">
-                {/* Avatar */}
                 <div className="w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0">
                   {u.isAdmin ? (
                     <Shield className="w-4 h-4 text-violet-600" />
@@ -180,7 +270,6 @@ export function AdminPage() {
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate text-foreground">
                     {u.email || u.username || u.clerkId}
@@ -200,7 +289,6 @@ export function AdminPage() {
                   )}
                 </div>
 
-                {/* Tier badge */}
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${
                   u.tier === "premium"
                     ? "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
@@ -209,10 +297,8 @@ export function AdminPage() {
                   {u.tier === "premium" ? "⭐ Premium" : "Free"}
                 </span>
 
-                {/* Actions */}
                 {u.tier === "free" ? (
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    {/* Duration selector */}
                     <div className="flex rounded-md border border-input overflow-hidden text-xs">
                       {DURATIONS.map((d) => (
                         <button
