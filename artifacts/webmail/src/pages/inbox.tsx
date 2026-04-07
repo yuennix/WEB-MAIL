@@ -119,7 +119,6 @@ export function InboxPage() {
     navigator.clipboard.writeText(activeAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Copied!", description: "Email address copied to clipboard." });
   };
 
   const handleGenerateRandom = () => {
@@ -183,19 +182,20 @@ export function InboxPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">Inbox</h1>
               {activeAddress && (
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-sm text-muted-foreground bg-muted/60 border border-border rounded px-2.5 py-1">
+                    {activeAddress}
+                  </span>
                   <button
                     onClick={handleCopy}
-                    className="group flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors"
-                    title="Click to copy"
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border transition-all ${
+                      copied
+                        ? "bg-green-50 dark:bg-green-950/40 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400"
+                        : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-muted/50"
+                    }`}
                   >
-                    <span className="border border-dashed border-border group-hover:border-primary/50 rounded px-2 py-0.5 bg-muted/50 transition-colors">
-                      {activeAddress}
-                    </span>
-                    {copied
-                      ? <Check className="w-3.5 h-3.5 text-green-500" />
-                      : <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    }
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? "Copied!" : "Copy Email"}
                   </button>
                   {unread > 0 && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300">
