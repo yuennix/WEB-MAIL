@@ -54,6 +54,13 @@ export function InboxPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      setLocation("/sign-in");
+    }
+  }, [isLoaded, isSignedIn, setLocation]);
+
   const {
     data: emailsData,
     isLoading: isLoadingEmails,
@@ -215,29 +222,8 @@ export function InboxPage() {
     );
   }
 
-  if (!isSignedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[100dvh] p-8 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg mb-6">
-          <Lock className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Sign in to access Weyn Emails</h2>
-        <p className="text-muted-foreground text-sm mb-8 max-w-sm">
-          Create an account or sign in to start receiving emails on your custom domain.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            className="bg-violet-600 hover:bg-violet-700 text-white px-8"
-            onClick={() => setLocation("/sign-in")}
-          >
-            Sign in
-          </Button>
-          <Button variant="outline" className="px-8" onClick={() => setLocation("/sign-up")}>
-            Create account
-          </Button>
-        </div>
-      </div>
-    );
+  if (isLoaded && !isSignedIn) {
+    return null;
   }
 
   return (
