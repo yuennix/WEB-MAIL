@@ -20,6 +20,17 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
       .returning();
   }
 
+  // Auto-expire premium if past expiry date
+  const now = new Date();
+  if (user.tier === "premium" && user.premiumExpiresAt && user.premiumExpiresAt < now) {
+    const [downgraded] = await db
+      .update(usersTable)
+      .set({ tier: "free", premiumExpiresAt: null })
+      .where(eq(usersTable.clerkId, clerkId))
+      .returning();
+    user = downgraded;
+  }
+
   res.json({
     id: user.id,
     clerkId: user.clerkId,
@@ -27,6 +38,7 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
     username: user.username,
     tier: user.tier,
     isAdmin: user.isAdmin,
+    premiumExpiresAt: user.premiumExpiresAt,
   });
 });
 

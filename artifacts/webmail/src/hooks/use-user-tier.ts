@@ -12,6 +12,7 @@ export interface UserProfile {
   username: string | null;
   tier: Tier;
   isAdmin: boolean;
+  premiumExpiresAt: string | null;
 }
 
 export function useUserTier() {
@@ -46,5 +47,11 @@ export function useUserTier() {
       .catch(() => setLoading(false));
   }, [isLoaded, isSignedIn, user]);
 
-  return { profile, loading, tier: profile?.tier ?? "free", isAdmin: profile?.isAdmin ?? false };
+  return {
+    profile,
+    loading,
+    tier: profile?.tier ?? "free",
+    isAdmin: profile?.isAdmin ?? false,
+    premiumExpiresAt: profile?.premiumExpiresAt ?? null,
+  };
 }

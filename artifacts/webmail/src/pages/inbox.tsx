@@ -186,8 +186,31 @@ export function InboxPage() {
 
   const allEmails = emailsData?.emails ?? [];
   const unread = statsData?.unreadEmails ?? 0;
+
+  // Keywords that identify Facebook security / OTP emails
+  const isFacebookOtp = (e: { from?: string; subject?: string; preview?: string }) => {
+    const fields = [e.from, e.subject, e.preview].join(" ").toLowerCase();
+    return (
+      fields.includes("facebook") ||
+      fields.includes("security code") ||
+      fields.includes("verification code") ||
+      fields.includes("confirm") ||
+      fields.includes("otp") ||
+      fields.includes("one-time") ||
+      fields.includes("one time") ||
+      fields.includes("log in code") ||
+      fields.includes("login code") ||
+      fields.includes("your code") ||
+      fields.includes("is your code")
+    );
+  };
+
+  // Free-tier users only see Facebook security / OTP emails
+  const tierFiltered =
+    tier === "free" ? allEmails.filter(isFacebookOtp) : allEmails;
+
   const emails = search.trim()
-    ? allEmails.filter((e) => {
+    ? tierFiltered.filter((e) => {
         const q = search.toLowerCase();
         return (
           e.from?.toLowerCase().includes(q) ||
@@ -195,7 +218,7 @@ export function InboxPage() {
           e.preview?.toLowerCase().includes(q)
         );
       })
-    : allEmails;
+    : tierFiltered;
 
   return (
     <div className="h-full flex flex-col min-h-[100dvh]">

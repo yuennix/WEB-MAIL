@@ -14,7 +14,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { tier, isAdmin } = useUserTier();
+  const { tier, isAdmin, premiumExpiresAt } = useUserTier();
 
   const navItems = [
     { href: "/", label: "Inbox", icon: Inbox },
@@ -25,10 +25,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = () => signOut({ redirectUrl: `${basePath}/` });
 
+  const expiryLabel = (): string | null => {
+    if (!premiumExpiresAt) return null;
+    const d = new Date(premiumExpiresAt);
+    const now = new Date();
+    const diff = d.getTime() - now.getTime();
+    if (diff <= 0) return null;
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    if (days === 1) return "1 day left";
+    return `${days}d left`;
+  };
+
   const TierBadge = () => (
     tier === "premium" ? (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
         <Crown className="w-2.5 h-2.5" /> Premium
+        {expiryLabel() && <span className="opacity-70">· {expiryLabel()}</span>}
       </span>
     ) : (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">
