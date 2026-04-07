@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Lock, Crown } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Lock, Crown, Trash2 } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ export function InboxPage() {
   const [domainOpen, setDomainOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [directInput, setDirectInput] = useState("");
+  const [clearing, setClearing] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const domainRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +179,20 @@ export function InboxPage() {
     navigator.clipboard.writeText(activeAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const clearInbox = async () => {
+    if (!activeAddress) return;
+    if (!confirm(`Delete all messages in ${activeAddress}? This cannot be undone.`)) return;
+    setClearing(true);
+    try {
+      await fetch(`${apiBase}/api/emails?address=${encodeURIComponent(activeAddress)}`, { method: "DELETE" });
+      refetchEmails();
+    } catch {
+      // silently ignore
+    } finally {
+      setClearing(false);
+    }
   };
 
   const allEmails = emailsData?.emails ?? [];
@@ -389,6 +404,18 @@ export function InboxPage() {
                   <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`} />
                   <span className="hidden sm:inline">Refresh</span>
                 </Button>
+                {allEmails.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={clearInbox}
+                    disabled={clearing}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{clearing ? "Clearing…" : "Clear"}</span>
+                  </Button>
+                )}
               </div>
             )}
           </div>

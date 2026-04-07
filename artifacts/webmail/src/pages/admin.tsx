@@ -179,20 +179,39 @@ export function AdminPage() {
       return;
     }
     setImporting(true);
-    setImportMsg("");
+    setImportMsg("Validating email addresses…");
     try {
+      // Step 1: validate emails via MX + format check
+      const validateRes = await fetch(`${apiBase}/api/emails/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails }),
+      });
+      const validateData = await validateRes.json();
+      const results: { email: string; valid: boolean; reason?: string }[] = validateData.results ?? [];
+      const valid = results.filter((r) => r.valid).map((r) => r.email);
+      const invalid = results.filter((r) => !r.valid);
+
+      if (valid.length === 0) {
+        const reasons = invalid.map((r) => `${r.email}: ${r.reason}`).join(" · ");
+        setImportMsg(`❌ All emails failed validation — ${reasons}`);
+        return;
+      }
+
+      // Step 2: import only valid ones
       const res = await fetch(`${apiBase}/api/admin/users/import`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-admin-password": storedPassword(),
         },
-        body: JSON.stringify({ emails }),
+        body: JSON.stringify({ emails: valid }),
       });
       const data = await res.json();
       if (res.ok) {
         let msg = `Done: ${data.created} added, ${data.skipped} already existed`;
         if (data.notInClerk?.length) msg += ` · Not in Clerk: ${data.notInClerk.join(", ")}`;
+        if (invalid.length > 0) msg += ` · Rejected (${invalid.length}): ${invalid.map((r) => `${r.email} (${r.reason})`).join(", ")}`;
         setImportMsg(msg);
         setImportEmails("");
         fetchUsers();

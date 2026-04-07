@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, count } from "drizzle-orm";
 import { db, emailsTable } from "@workspace/db";
+import { promises as dns } from "dns";
 import {
   ListEmailsQueryParams,
   GetEmailQueryParams,
@@ -129,6 +130,64 @@ router.get("/emails/:id", async (req, res): Promise<void> => {
     read: true,
     attachments: [],
   });
+});
+
+// Clear all emails for an address
+router.delete("/emails", async (req, res): Promise<void> => {
+  const { address } = req.query;
+  if (!address || typeof address !== "string") {
+    res.status(400).json({ error: "address query param required" });
+    return;
+  }
+  const addr = address.toLowerCase().trim();
+  await db.delete(emailsTable).where(eq(emailsTable.toAddress, addr));
+  res.json({ ok: true });
+});
+
+// Validate whether an email address's domain has valid MX records
+router.post("/emails/validate", async (req, res): Promise<void> => {
+  const { emails } = req.body as { emails?: string[] };
+  if (!Array.isArray(emails)) {
+    res.status(400).json({ error: "emails array required" });
+    return;
+  }
+
+  const results: { email: string; valid: boolean; reason?: string }[] = [];
+
+  for (const raw of emails) {
+    const email = raw.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      results.push({ email, valid: false, reason: "Invalid email format" });
+      continue;
+    }
+
+    const domain = email.split("@")[1];
+
+    // Gmail-specific format check
+    if (domain === "gmail.com") {
+      const localPart = email.split("@")[0];
+      const gmailRegex = /^[a-z0-9]([a-z0-9.]{4,28}[a-z0-9])$/;
+      if (!gmailRegex.test(localPart) || localPart.includes("..")) {
+        results.push({ email, valid: false, reason: "Invalid Gmail format (must be 6–30 chars, letters/numbers/dots only, no consecutive dots)" });
+        continue;
+      }
+    }
+
+    // MX record lookup — confirms the domain can receive email
+    try {
+      const mx = await dns.resolveMx(domain);
+      if (!mx || mx.length === 0) {
+        results.push({ email, valid: false, reason: `Domain ${domain} has no mail server (MX records)` });
+      } else {
+        results.push({ email, valid: true });
+      }
+    } catch {
+      results.push({ email, valid: false, reason: `Domain ${domain} not found or has no MX records` });
+    }
+  }
+
+  res.json({ results });
 });
 
 export default router;
