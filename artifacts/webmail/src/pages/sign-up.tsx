@@ -82,7 +82,7 @@ export function SignUpPage() {
       <div className="text-center mb-5 max-w-md relative z-10">
         <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Web Domain Email Platform</p>
         <h1 className="text-2xl font-extrabold text-white leading-tight">
-          Your Own Email on weyn.store &amp; jhames.shop
+          Create an Account &amp; Receive Emails Instantly
         </h1>
       </div>
 
