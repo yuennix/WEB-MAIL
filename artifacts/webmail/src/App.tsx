@@ -51,18 +51,24 @@ function ClerkQueryClientCacheInvalidator() {
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={InboxPage} />
-        <Route path="/domains" component={DomainsPage} />
-        <Route path="/email/:id" component={EmailDetailPage} />
-        <Route path="/admin" component={AdminPage} />
-        <Route path="/profile" component={ProfilePage} />
-        <Route path="/sign-in/*?" component={SignInPage} />
-        <Route path="/sign-up/*?" component={SignUpPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Auth pages — full screen, no sidebar */}
+      <Route path="/sign-in/*?" component={SignInPage} />
+      <Route path="/sign-up/*?" component={SignUpPage} />
+      {/* All other pages — inside layout with sidebar */}
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/" component={InboxPage} />
+            <Route path="/domains" component={DomainsPage} />
+            <Route path="/email/:id" component={EmailDetailPage} />
+            <Route path="/admin" component={AdminPage} />
+            <Route path="/profile" component={ProfilePage} />
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
+      </Route>
+    </Switch>
   );
 }
 
