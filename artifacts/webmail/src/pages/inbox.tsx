@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Lock, Crown, Trash2 } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Lock, Crown, Trash2, Trash } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,6 +192,21 @@ export function InboxPage() {
       // silently ignore
     } finally {
       setClearing(false);
+    }
+  };
+
+  const deleteInbox = async () => {
+    if (!activeAddress) return;
+    if (!confirm(`Delete inbox "${activeAddress}" and all its messages? You'll return to the inbox picker.`)) return;
+    setClearing(true);
+    try {
+      await fetch(`${apiBase}/api/emails?address=${encodeURIComponent(activeAddress)}`, { method: "DELETE" });
+    } catch {
+      // silently ignore
+    } finally {
+      setClearing(false);
+      setActiveAddress("");
+      setAlias("");
     }
   };
 
@@ -411,11 +426,23 @@ export function InboxPage() {
                     className="h-9 gap-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={clearInbox}
                     disabled={clearing}
+                    title="Clear all messages but keep inbox open"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">{clearing ? "Clearing…" : "Clear"}</span>
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-2 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60"
+                  onClick={deleteInbox}
+                  disabled={clearing}
+                  title="Delete inbox and all messages, return to picker"
+                >
+                  <Trash className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{clearing ? "Deleting…" : "Delete Inbox"}</span>
+                </Button>
               </div>
             )}
           </div>
