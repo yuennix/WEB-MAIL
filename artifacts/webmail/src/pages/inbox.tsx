@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Mail, Check, Zap, ZapOff, Radio } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,22 +15,47 @@ export function InboxPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const [addressInput, setAddressInput] = useState("");
+  const [alias, setAlias] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState("");
   const [activeAddress, setActiveAddress] = useState("");
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
+  const [domainOpen, setDomainOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  const domainRef = useRef<HTMLDivElement>(null);
 
+  const { data: domainsData } = useListDomains();
+  const domains = domainsData?.domains ?? [];
+
+  // Set default domain once domains load
+  useEffect(() => {
+    if (domains.length && !selectedDomain) {
+      setSelectedDomain(domains[0].name);
+    }
+  }, [domains, selectedDomain]);
+
+  // Restore last used address
   useEffect(() => {
     const saved = localStorage.getItem("webmail-address");
-    if (saved) {
-      setAddressInput(saved);
+    if (saved && saved.includes("@")) {
+      const [savedAlias, savedDomain] = saved.split("@");
+      setAlias(savedAlias);
+      setSelectedDomain(savedDomain);
       setActiveAddress(saved);
     }
   }, []);
 
-  const { data: domainsData } = useListDomains();
+  // Close domain dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (domainRef.current && !domainRef.current.contains(e.target as Node)) {
+        setDomainOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const {
     data: emailsData,
@@ -102,14 +127,31 @@ export function InboxPage() {
     };
   }, [activeAddress, refetchEmails]);
 
-  const handleGetEmail = (e?: React.FormEvent) => {
+  const openInbox = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!addressInput.trim()) return;
-    let addr = addressInput.trim().toLowerCase();
-    if (!addr.includes("@") && domainsData?.domains?.length) {
-      addr = `${addr}@${domainsData.domains[0].name}`;
-      setAddressInput(addr);
+    const domain = selectedDomain || domains[0]?.name;
+    if (!domain) return;
+    const prefix = alias.trim().toLowerCase() || generatePrefix();
+    const addr = `${prefix}@${domain}`;
+    setAlias(prefix);
+    setActiveAddress(addr);
+    localStorage.setItem("webmail-address", addr);
+  };
+
+  const generatePrefix = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    return Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  };
+
+  const handleShuffle = () => {
+    const domain = selectedDomain || domains[0]?.name;
+    if (!domain) {
+      toast({ title: "No domains available", variant: "destructive" });
+      return;
     }
+    const prefix = generatePrefix();
+    const addr = `${prefix}@${domain}`;
+    setAlias(prefix);
     setActiveAddress(addr);
     localStorage.setItem("webmail-address", addr);
   };
@@ -121,25 +163,6 @@ export function InboxPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleGenerateRandom = () => {
-    if (!domainsData?.domains?.length) {
-      toast({
-        title: "No domains configured",
-        description: "Please add a domain first in the Domains page.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    const prefix = Array.from({ length: 7 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    const domain = domainsData.domains[0].name;
-    const newAddr = `${prefix}@${domain}`;
-    setAddressInput(newAddr);
-    setActiveAddress(newAddr);
-    localStorage.setItem("webmail-address", newAddr);
-    toast({ title: "Generated!", description: `Monitoring ${newAddr}` });
-  };
-
   const emails = emailsData?.emails ?? [];
   const unread = statsData?.unreadEmails ?? 0;
 
@@ -147,18 +170,52 @@ export function InboxPage() {
     <div className="h-full flex flex-col min-h-[100dvh]">
       {/* Top bar */}
       <div className="border-b border-border bg-card/70 backdrop-blur-sm px-4 md:px-8 py-3 shrink-0 sticky top-0 z-10">
-        <form onSubmit={handleGetEmail} className="flex items-center gap-2 max-w-3xl">
-          <div className="relative flex-1">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <form onSubmit={openInbox} className="flex items-center gap-2 max-w-3xl">
+          {/* Split address input: alias + @ + domain picker */}
+          <div className="flex flex-1 rounded-md border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring overflow-hidden">
             <Input
               type="text"
-              placeholder="alias or full@address.com"
-              value={addressInput}
-              onChange={(e) => setAddressInput(e.target.value)}
-              className="pl-9 h-10 font-mono text-sm bg-background"
+              placeholder="alias"
+              value={alias}
+              onChange={(e) => setAlias(e.target.value.toLowerCase().replace(/[^a-z0-9._+-]/g, ""))}
+              className="flex-1 border-0 shadow-none rounded-none focus-visible:ring-0 font-mono text-sm h-10 min-w-0"
             />
+            <div className="flex items-center shrink-0 border-l border-input bg-muted/40 px-2 text-sm text-muted-foreground font-mono select-none">
+              @
+            </div>
+            {/* Domain dropdown */}
+            <div className="relative shrink-0" ref={domainRef}>
+              <button
+                type="button"
+                onClick={() => setDomainOpen(!domainOpen)}
+                className="flex items-center gap-1.5 h-10 px-3 font-mono text-sm text-foreground bg-muted/40 hover:bg-muted/70 transition-colors border-l border-input"
+              >
+                {selectedDomain || (domains[0]?.name ?? "loading...")}
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+              {domainOpen && domains.length > 0 && (
+                <div className="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px] overflow-hidden">
+                  {domains.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      className={`w-full text-left px-4 py-2.5 font-mono text-sm hover:bg-muted transition-colors ${
+                        selectedDomain === d.name ? "text-violet-600 dark:text-violet-400 font-semibold bg-violet-50 dark:bg-violet-950/30" : "text-foreground"
+                      }`}
+                      onClick={() => {
+                        setSelectedDomain(d.name);
+                        setDomainOpen(false);
+                      }}
+                    >
+                      {d.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <Button type="submit" variant="default" size="sm" className="h-10 px-4 shrink-0">
+
+          <Button type="submit" variant="default" size="sm" className="h-10 px-4 shrink-0 bg-violet-600 hover:bg-violet-700 text-white border-transparent">
             Open
           </Button>
           <Button
@@ -166,8 +223,8 @@ export function InboxPage() {
             variant="outline"
             size="icon"
             className="h-10 w-10 shrink-0"
-            onClick={handleGenerateRandom}
-            title="Generate random address"
+            onClick={handleShuffle}
+            title="Generate random alias"
           >
             <Shuffle className="w-4 h-4" />
           </Button>
@@ -257,29 +314,49 @@ export function InboxPage() {
               ))}
             </div>
           ) : !activeAddress ? (
-            <div className="flex flex-col items-center justify-center py-28 text-center px-4">
+            <div className="flex flex-col items-center justify-center py-20 text-center px-4">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-950/40 dark:to-indigo-950/40 flex items-center justify-center mb-6 shadow-sm">
-                <Mail className="w-9 h-9 text-violet-400" />
+                <Inbox className="w-9 h-9 text-violet-400" />
               </div>
-              <h2 className="text-xl font-semibold mb-2">No inbox selected</h2>
-              <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-                Enter an email alias or full address above, or hit the shuffle button to generate a random one instantly.
+              <h2 className="text-xl font-semibold mb-2">Pick an inbox</h2>
+              <p className="text-muted-foreground max-w-sm text-sm leading-relaxed mb-6">
+                Type any alias above and choose a domain — or hit the shuffle button to get a random address instantly.
               </p>
+              {domains.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {domains.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => {
+                        setSelectedDomain(d.name);
+                        const prefix = generatePrefix();
+                        const addr = `${prefix}@${d.name}`;
+                        setAlias(prefix);
+                        setActiveAddress(addr);
+                        localStorage.setItem("webmail-address", addr);
+                      }}
+                      className="px-4 py-2 rounded-full border border-border bg-card hover:bg-muted hover:border-violet-300 dark:hover:border-violet-700 transition-colors text-sm font-mono text-muted-foreground hover:text-foreground"
+                    >
+                      @{d.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : emails.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-28 text-center px-4">
+            <div className="flex flex-col items-center justify-center py-24 text-center px-4">
               <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-6">
                 <Inbox className="w-9 h-9 text-muted-foreground/40" />
               </div>
               <h2 className="text-xl font-semibold mb-2">Inbox is empty</h2>
               <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
                 Waiting for messages at{" "}
-                <span className="font-mono text-foreground">{activeAddress}</span>. Emails will appear here automatically.
+                <span className="font-mono text-foreground">{activeAddress}</span>. Emails will appear here instantly.
               </p>
-              {autoRefresh && (
+              {liveConnected && (
                 <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
-                  <Zap className="w-3 h-3 text-violet-500" />
-                  Checking every 15 seconds
+                  <Radio className="w-3 h-3 text-emerald-500" />
+                  Connected live — no refresh needed
                 </p>
               )}
             </div>
