@@ -51,11 +51,13 @@ router.post("/temp-mail/register", async (req, res): Promise<void> => {
       return;
     }
 
-    // Persist token
-    await db
-      .insert(tempMailTokensTable)
-      .values({ email: addr, token })
-      .onConflictDoUpdate({ target: tempMailTokensTable.email, set: { token } });
+    // Persist token — explicit check to avoid conflict syntax issues
+    const [existingRow] = await db.select().from(tempMailTokensTable).where(eq(tempMailTokensTable.email, addr));
+    if (existingRow) {
+      await db.update(tempMailTokensTable).set({ token }).where(eq(tempMailTokensTable.email, addr));
+    } else {
+      await db.insert(tempMailTokensTable).values({ email: addr, token });
+    }
 
     res.json({ ok: true, token, cached: false });
   } catch (err: any) {

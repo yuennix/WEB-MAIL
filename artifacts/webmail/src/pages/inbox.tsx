@@ -87,25 +87,25 @@ export function InboxPage() {
     }
   );
 
-  // Sync messages from temp-mail.io if address is registered there
-  const syncTempMail = useCallback(async (address: string) => {
+  // Helper: call temp-mail sync and refetch if new messages arrived
+  const syncTempMailAddr = async (address: string) => {
     try {
-      const syncRes = await fetch(`${apiBase}/api/temp-mail/sync`, {
+      const res = await fetch(`${apiBase}/api/temp-mail/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address }),
       });
-      const syncData = await syncRes.json();
-      if (syncData.ok && syncData.added > 0) refetchEmails();
-    } catch {
-      // Silently ignore — not a temp-mail address or network error
-    }
-  }, [refetchEmails]);
+      const data = await res.json();
+      if (data.ok && data.added > 0) refetchEmails();
+    } catch { /* silently ignore */ }
+  };
 
-  // When inbox changes, try to register it on temp-mail.io and sync messages
+  // When inbox address changes: register on temp-mail.io once, then do initial sync
+  // Only depends on activeAddress to avoid effect loops
   useEffect(() => {
     if (!activeAddress) return;
-    const registerAndSync = async () => {
+    let cancelled = false;
+    const run = async () => {
       try {
         const regRes = await fetch(`${apiBase}/api/temp-mail/register`, {
           method: "POST",
@@ -113,20 +113,20 @@ export function InboxPage() {
           body: JSON.stringify({ address: activeAddress }),
         });
         const regData = await regRes.json();
-        if (regData.ok) await syncTempMail(activeAddress);
-      } catch {
-        // Not a temp-mail domain — fine, webhook handles it
-      }
+        if (!cancelled && regData.ok) await syncTempMailAddr(activeAddress);
+      } catch { /* not a temp-mail domain — webhook handles it */ }
     };
-    registerAndSync();
-  }, [activeAddress, syncTempMail]);
+    run();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAddress]);
 
   const doRefetch = useCallback(() => {
-    if (activeAddress) {
-      refetchEmails();
-      syncTempMail(activeAddress);
-    }
-  }, [activeAddress, refetchEmails, syncTempMail]);
+    if (!activeAddress) return;
+    refetchEmails();
+    syncTempMailAddr(activeAddress);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAddress, refetchEmails]);
 
   useEffect(() => {
     if (!autoRefresh || !activeAddress) return;
