@@ -343,14 +343,11 @@ export function InboxPage() {
 
           {/* Free-tier restriction notice */}
           {tier === "free" && (
-            <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
-              <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Free plan — Facebook 8-digit codes only</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                  Only Facebook emails containing an 8-digit security code are shown. Upgrade to Premium for unrestricted access to all emails.
-                </p>
-              </div>
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5">
+              <Crown className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                <span className="font-semibold">Free plan</span> — Facebook 8-digit codes only
+              </p>
             </div>
           )}
 
