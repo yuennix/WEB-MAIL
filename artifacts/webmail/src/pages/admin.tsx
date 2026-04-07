@@ -209,14 +209,16 @@ export function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        let msg = `Done: ${data.created} added, ${data.skipped} already existed`;
-        if (data.notInClerk?.length) msg += ` · Not in Clerk: ${data.notInClerk.join(", ")}`;
-        if (invalid.length > 0) msg += ` · Rejected (${invalid.length}): ${invalid.map((r) => `${r.email} (${r.reason})`).join(", ")}`;
-        setImportMsg(msg);
+        const parts: string[] = [];
+        if (data.created > 0) parts.push(`✅ ${data.created} added`);
+        if (data.skipped > 0) parts.push(`${data.skipped} already existed`);
+        if (data.notInClerk?.length) parts.push(`❌ Not registered in Clerk (rejected): ${data.notInClerk.join(", ")}`);
+        if (invalid.length > 0) parts.push(`❌ Invalid domain/format (rejected): ${invalid.map((r) => `${r.email} — ${r.reason}`).join(", ")}`);
+        setImportMsg(parts.join(" · "));
         setImportEmails("");
         fetchUsers();
       } else {
-        setImportMsg(data.error ?? "Import failed");
+        setImportMsg(`❌ ${data.error ?? "Import failed"}`);
       }
     } catch {
       setImportMsg("Could not reach server");

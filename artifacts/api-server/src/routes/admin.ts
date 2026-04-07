@@ -108,7 +108,12 @@ router.post("/admin/users/import", checkAdminPassword, async (req, res): Promise
   }
 
   const secretKey = process.env.CLERK_SECRET_KEY;
-  const clerkClient = secretKey ? createClerkClient({ secretKey }) : null;
+  if (!secretKey) {
+    res.status(500).json({ error: "CLERK_SECRET_KEY is not configured on the server. Cannot verify Clerk accounts." });
+    return;
+  }
+
+  const clerkClient = createClerkClient({ secretKey });
 
   const [{ count: dbCount }] = await db.select({ count: count() }).from(usersTable);
   let isEmpty = Number(dbCount) === 0;
@@ -120,46 +125,29 @@ router.post("/admin/users/import", checkAdminPassword, async (req, res): Promise
     const email = rawEmail.trim().toLowerCase();
     if (!email) continue;
 
-    // If Clerk SDK is available, verify the email is actually registered in Clerk
-    if (clerkClient) {
-      const results = await clerkClient.users.getUserList({ emailAddress: [email], limit: 1 });
-      if (results.data.length === 0) {
-        notInClerk.push(email);
-        continue;
-      }
-      // Use the real Clerk ID + username if available
-      const clerkUser = results.data[0];
-      const [existing] = await db
-        .select({ id: usersTable.id })
-        .from(usersTable)
-        .where(eq(usersTable.clerkId, clerkUser.id));
-      if (existing) { skipped++; continue; }
-      const isFirst = isEmpty && created === 0;
-      await db.insert(usersTable).values({
-        clerkId: clerkUser.id,
-        email,
-        username: clerkUser.username ?? null,
-        tier: isFirst ? "premium" : "free",
-        isAdmin: isFirst,
-      });
-      created++;
-    } else {
-      // No Clerk SDK — fallback: add with synthetic ID
-      const [existing] = await db
-        .select({ id: usersTable.id })
-        .from(usersTable)
-        .where(eq(usersTable.email, email));
-      if (existing) { skipped++; continue; }
-      const isFirst = isEmpty && created === 0;
-      await db.insert(usersTable).values({
-        clerkId: `manual_${email}`,
-        email,
-        username: null,
-        tier: isFirst ? "premium" : "free",
-        isAdmin: isFirst,
-      });
-      created++;
+    // Always verify the email exists in Clerk before adding
+    const results = await clerkClient.users.getUserList({ emailAddress: [email], limit: 1 });
+    if (results.data.length === 0) {
+      notInClerk.push(email);
+      continue;
     }
+
+    const clerkUser = results.data[0];
+    const [existing] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, clerkUser.id));
+    if (existing) { skipped++; continue; }
+
+    const isFirst = isEmpty && created === 0;
+    await db.insert(usersTable).values({
+      clerkId: clerkUser.id,
+      email,
+      username: clerkUser.username ?? null,
+      tier: isFirst ? "premium" : "free",
+      isAdmin: isFirst,
+    });
+    created++;
   }
 
   res.json({ ok: true, created, skipped, notInClerk });
