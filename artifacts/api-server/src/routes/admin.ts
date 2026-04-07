@@ -43,6 +43,7 @@ router.post("/admin/auth", (req, res): void => {
 });
 
 router.get("/admin/users", checkAdminPassword, async (_req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   const users = await db
     .select()
     .from(usersTable)

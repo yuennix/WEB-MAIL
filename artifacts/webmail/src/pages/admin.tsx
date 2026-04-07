@@ -92,8 +92,11 @@ export function AdminPage() {
   const fetchUsers = async (pwd?: string) => {
     setFetching(true);
     try {
-      const res = await fetch(`${apiBase}/api/admin/users`, {
-        headers: { "x-admin-password": pwd ?? storedPassword() },
+      const res = await fetch(`${apiBase}/api/admin/users?t=${Date.now()}`, {
+        headers: {
+          "x-admin-password": pwd ?? storedPassword(),
+          "Cache-Control": "no-cache",
+        },
       });
       const data = await res.json();
       setUsers(data.users ?? []);
