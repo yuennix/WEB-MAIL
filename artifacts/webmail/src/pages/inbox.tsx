@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -171,8 +171,8 @@ export function InboxPage() {
       {/* Top bar */}
       <div className="border-b border-border bg-card/70 backdrop-blur-sm px-4 md:px-8 py-3 shrink-0 sticky top-0 z-10">
         <form onSubmit={openInbox} className="flex items-center gap-2 max-w-3xl">
-          {/* Split address input: alias + @ + domain picker */}
-          <div className="flex flex-1 rounded-md border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring overflow-hidden">
+          {/* Alias input */}
+          <div className="flex flex-1 items-center rounded-md border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring min-w-0">
             <Input
               type="text"
               placeholder="alias"
@@ -180,44 +180,50 @@ export function InboxPage() {
               onChange={(e) => setAlias(e.target.value.toLowerCase().replace(/[^a-z0-9._+-]/g, ""))}
               className="flex-1 border-0 shadow-none rounded-none focus-visible:ring-0 font-mono text-sm h-10 min-w-0"
             />
-            <div className="flex items-center shrink-0 border-l border-input bg-muted/40 px-2 text-sm text-muted-foreground font-mono select-none">
+            <span className="px-2 text-sm text-muted-foreground font-mono select-none shrink-0 border-l border-input h-10 flex items-center bg-muted/30">
               @
-            </div>
-            {/* Domain dropdown */}
-            <div className="relative shrink-0" ref={domainRef}>
-              <button
-                type="button"
-                onClick={() => setDomainOpen(!domainOpen)}
-                className="flex items-center gap-1.5 h-10 px-3 font-mono text-sm text-foreground bg-muted/40 hover:bg-muted/70 transition-colors border-l border-input"
-              >
-                {selectedDomain || (domains[0]?.name ?? "loading...")}
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-              {domainOpen && domains.length > 0 && (
-                <div className="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[160px] overflow-hidden">
-                  {domains.map((d) => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      className={`w-full text-left px-4 py-2.5 font-mono text-sm hover:bg-muted transition-colors ${
-                        selectedDomain === d.name ? "text-violet-600 dark:text-violet-400 font-semibold bg-violet-50 dark:bg-violet-950/30" : "text-foreground"
-                      }`}
-                      onClick={() => {
-                        setSelectedDomain(d.name);
-                        setDomainOpen(false);
-                      }}
-                    >
-                      {d.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            </span>
           </div>
 
-          <Button type="submit" variant="default" size="sm" className="h-10 px-4 shrink-0 bg-violet-600 hover:bg-violet-700 text-white border-transparent">
-            Open
+          {/* Domain dropdown — outside the overflow container so it can render freely */}
+          <div className="relative shrink-0" ref={domainRef}>
+            <button
+              type="button"
+              onClick={() => setDomainOpen(!domainOpen)}
+              className="flex items-center gap-1.5 h-10 px-3 font-mono text-sm text-foreground bg-background border border-input rounded-md hover:bg-muted/60 transition-colors shadow-sm"
+            >
+              {selectedDomain || (domains[0]?.name ?? "…")}
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${domainOpen ? "rotate-180" : ""}`} />
+            </button>
+            {domainOpen && domains.length > 0 && (
+              <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 min-w-[160px] overflow-hidden">
+                {domains.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className={`w-full text-left px-4 py-2.5 font-mono text-sm hover:bg-muted transition-colors ${
+                      selectedDomain === d.name
+                        ? "text-violet-600 dark:text-violet-400 font-semibold bg-violet-50 dark:bg-violet-950/30"
+                        : "text-foreground"
+                    }`}
+                    onClick={() => {
+                      setSelectedDomain(d.name);
+                      setDomainOpen(false);
+                    }}
+                  >
+                    {d.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Arrow submit */}
+          <Button type="submit" variant="default" size="icon" className="h-10 w-10 shrink-0 bg-violet-600 hover:bg-violet-700 text-white border-transparent">
+            <ArrowRight className="w-4 h-4" />
           </Button>
+
+          {/* Shuffle */}
           <Button
             type="button"
             variant="outline"
