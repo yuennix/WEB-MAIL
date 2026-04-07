@@ -222,9 +222,3 @@
     pointer-events: none;
   }
 }
-
-/* Hide Clerk "Development mode" badge */
-.cl-badge,
-[data-localization-key="badge__devMode"] {
-  display: none !important;
-}
