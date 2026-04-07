@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Star, Lock, Unlock, ShieldCheck, Globe, UserCheck } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -284,6 +284,75 @@ export function InboxPage() {
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
+          </div>
+
+          {/* Free vs Premium */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Free */}
+            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border">
+                <Unlock className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm text-foreground">Free</span>
+                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Preview only</span>
+              </div>
+              {/* Demo email */}
+              <div className="p-3 space-y-2">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-2">Sample inbox</p>
+                <div className="rounded-lg border border-border bg-background p-3 space-y-2 text-xs">
+                  <div className="flex items-start gap-2">
+                    <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">F</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-semibold text-foreground truncate">Facebook</span>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">0 min ago</span>
+                      </div>
+                      <p className="text-muted-foreground truncate">39522998 is your security code</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-border pt-2 space-y-1.5">
+                    <p className="font-semibold text-foreground">Hi Anna Liza,</p>
+                    <p className="text-muted-foreground leading-relaxed">We're sending a security code to confirm it's really you. Here's your code:</p>
+                    <div className="text-center py-2">
+                      <span className="font-mono text-2xl font-bold tracking-[0.25em] text-violet-600 dark:text-violet-400">39522998</span>
+                    </div>
+                    <p className="text-muted-foreground text-[10px]">Don't share this code with anyone.</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center pt-1">Receive OTPs &amp; verification codes — read only</p>
+              </div>
+            </div>
+
+            {/* Premium */}
+            <div className="rounded-xl border border-violet-300 dark:border-violet-700 bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/40 dark:to-indigo-950/40 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-violet-200 dark:border-violet-800">
+                <Star className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                <span className="font-semibold text-sm text-violet-700 dark:text-violet-300">Premium</span>
+                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-600 text-white">Full access</span>
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-[11px] text-violet-600/70 dark:text-violet-400/70 uppercase tracking-widest font-semibold">Everything in Free, plus</p>
+                <ul className="space-y-2.5">
+                  {[
+                    { icon: Globe, text: "Use your own domain for signups" },
+                    { icon: UserCheck, text: "Create accounts on any platform" },
+                    { icon: ShieldCheck, text: "Receive all emails, not just OTPs" },
+                    { icon: Copy, text: "Unlimited aliases per domain" },
+                    { icon: Zap, text: "Real-time delivery via live stream" },
+                  ].map(({ icon: Icon, text }) => (
+                    <li key={text} className="flex items-center gap-2.5 text-sm text-violet-900 dark:text-violet-200">
+                      <Icon className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+                <div className="pt-2">
+                  <div className="rounded-lg border border-violet-200 dark:border-violet-700 bg-white/60 dark:bg-black/20 p-2.5 text-center">
+                    <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">Use <span className="font-mono font-bold">weyn.store</span> or <span className="font-mono font-bold">jhames.shop</span></p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Generate above &amp; start receiving instantly</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Header row */}
