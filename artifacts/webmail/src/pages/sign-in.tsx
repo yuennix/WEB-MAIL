@@ -3,65 +3,116 @@ import { Mail, CheckCircle, Zap } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+const clerkAppearance = {
+  elements: {
+    card: {
+      background: "rgba(255,255,255,0.08)",
+      backdropFilter: "blur(20px)",
+      border: "1px solid rgba(255,255,255,0.18)",
+      boxShadow: "0 8px 40px rgba(0,0,0,0.25)",
+      borderRadius: "1.25rem",
+    },
+    headerTitle: { color: "#fff", fontWeight: "800" },
+    headerSubtitle: { color: "rgba(255,255,255,0.6)" },
+    formFieldLabel: { color: "rgba(255,255,255,0.75)", fontSize: "0.8rem" },
+    formFieldInput: {
+      background: "rgba(255,255,255,0.12)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "#fff",
+      borderRadius: "0.625rem",
+    },
+    formButtonPrimary: {
+      background: "linear-gradient(135deg, #a78bfa, #6d28d9)",
+      border: "none",
+      borderRadius: "0.625rem",
+      fontWeight: "700",
+      boxShadow: "0 4px 15px rgba(109,40,217,0.4)",
+    },
+    socialButtonsBlockButton: {
+      background: "rgba(255,255,255,0.1)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "#fff",
+      borderRadius: "0.625rem",
+    },
+    socialButtonsBlockButtonText: { color: "#fff" },
+    dividerLine: { background: "rgba(255,255,255,0.15)" },
+    dividerText: { color: "rgba(255,255,255,0.4)" },
+    footerActionLink: { color: "#c4b5fd" },
+    footerActionText: { color: "rgba(255,255,255,0.45)" },
+    identityPreviewText: { color: "#fff" },
+    identityPreviewEditButton: { color: "#c4b5fd" },
+    formFieldInputShowPasswordButton: { color: "rgba(255,255,255,0.6)" },
+    alternativeMethodsBlockButton: {
+      background: "rgba(255,255,255,0.1)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "#fff",
+      borderRadius: "0.625rem",
+    },
+    otpCodeFieldInput: {
+      background: "rgba(255,255,255,0.12)",
+      border: "1px solid rgba(255,255,255,0.25)",
+      color: "#fff",
+    },
+  },
+};
+
 export function SignInPage() {
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-12"
+      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-10"
       style={{
-        background: "linear-gradient(135deg, #6d28d9 0%, #4f46e5 40%, #7c3aed 70%, #5b21b6 100%)",
+        background: "linear-gradient(135deg, #3b0764 0%, #4f46e5 35%, #6d28d9 65%, #1e1b4b 100%)",
       }}
     >
+      {/* Decorative blobs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl" />
+      </div>
+
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shadow">
+      <div className="flex items-center gap-3 mb-5 relative z-10">
+        <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg">
           <Mail className="w-5 h-5 text-white" />
         </div>
-        <span className="font-extrabold text-2xl text-white tracking-tight">Weyn Emails</span>
+        <span className="font-black text-xl text-white tracking-widest uppercase">WEYN EMAILS</span>
       </div>
 
       {/* Headline */}
-      <div className="text-center mb-6 max-w-lg">
-        <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-2">Web Domain Email Platform</p>
-        <h1 className="text-3xl font-extrabold text-white leading-tight mb-3">
+      <div className="text-center mb-5 max-w-md relative z-10">
+        <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-2">Web Domain Email Platform</p>
+        <h1 className="text-2xl font-extrabold text-white leading-tight">
           Receive Emails on Your Custom Domain — Instantly.
         </h1>
-        <p className="text-white/75 text-sm leading-relaxed">
-          Catch any email sent to <strong>@weyn.store</strong> or <strong>@jhames.shop</strong>. Just type an alias and start receiving right away.
-        </p>
       </div>
 
-      {/* Tier caption cards */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-8 w-full max-w-lg">
-        <div className="flex-1 flex items-start gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20">
-          <CheckCircle className="w-4 h-4 text-white/80 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-white font-bold text-sm">FREE</p>
-            <p className="text-white/65 text-xs leading-relaxed mt-0.5">
-              Facebook security codes only — 8-digit verification codes from Facebook
-            </p>
-          </div>
+      {/* Compact tier pills */}
+      <div className="flex gap-2 mb-6 relative z-10">
+        <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/15 rounded-full px-3 py-1.5">
+          <CheckCircle className="w-3 h-3 text-green-300 shrink-0" />
+          <span className="text-white font-bold text-xs">FREE</span>
+          <span className="text-white/55 text-xs">— Facebook codes only</span>
         </div>
-        <div className="flex-1 flex items-start gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-4 py-3 border border-violet-300/30">
-          <Zap className="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-yellow-200 font-bold text-sm">PREMIUM ⭐</p>
-            <p className="text-white/65 text-xs leading-relaxed mt-0.5">
-              All emails — unlimited, any sender, zero restrictions
-            </p>
-          </div>
+        <div className="flex items-center gap-1.5 bg-yellow-400/10 backdrop-blur-sm border border-yellow-300/25 rounded-full px-3 py-1.5">
+          <Zap className="w-3 h-3 text-yellow-300 shrink-0" />
+          <span className="text-yellow-200 font-bold text-xs">PREMIUM</span>
+          <span className="text-white/55 text-xs">— all emails, unlimited</span>
         </div>
       </div>
 
-      {/* Clerk form */}
-      <SignIn
-        routing="path"
-        path={`${basePath}/sign-in`}
-        signUpUrl={`${basePath}/sign-up`}
-        fallbackRedirectUrl={`${basePath}/`}
-      />
+      {/* Clerk form — glassmorphism */}
+      <div className="relative z-10 w-full max-w-sm">
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+          fallbackRedirectUrl={`${basePath}/`}
+          appearance={clerkAppearance}
+        />
+      </div>
 
-      <p className="text-white/25 text-xs mt-8">
-        © {new Date().getFullYear()} Weyn Emails · weyn.store · jhames.shop
+      <p className="text-white/20 text-[10px] mt-6 relative z-10">
+        © {new Date().getFullYear()} WEYN EMAILS · weyn.store · jhames.shop
       </p>
     </div>
   );

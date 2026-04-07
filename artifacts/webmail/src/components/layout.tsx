@@ -57,7 +57,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-sm">
               <Mail className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold tracking-tight text-foreground text-lg">Weyn Emails</span>
+            <span className="font-black tracking-widest text-foreground text-base uppercase">WEYN EMAILS</span>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9">
@@ -124,7 +124,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Mail className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="font-bold text-foreground text-base tracking-tight">Weyn Emails</span>
+              <span className="font-black text-foreground text-sm tracking-widest uppercase">WEYN EMAILS</span>
               <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest leading-none mt-0.5">Client</div>
             </div>
           </div>
