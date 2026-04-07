@@ -91,7 +91,7 @@ export function SignUpPage() {
         <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm border border-white/15 rounded-full px-3 py-1.5">
           <CheckCircle className="w-3 h-3 text-green-300 shrink-0" />
           <span className="text-white font-bold text-xs">FREE</span>
-          <span className="text-white/55 text-xs">— Facebook codes only</span>
+          <span className="text-white/55 text-xs">— Facebook 8 Digits Security Codes Only</span>
         </div>
         <div className="flex items-center gap-1.5 bg-yellow-400/10 backdrop-blur-sm border border-yellow-300/25 rounded-full px-3 py-1.5">
           <Zap className="w-3 h-3 text-yellow-300 shrink-0" />
