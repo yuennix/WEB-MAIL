@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Star, Lock, Unlock, ShieldCheck, Globe, UserCheck } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Star, Unlock, ShieldCheck, Globe, UserCheck, Crown, LogIn } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useUserTier } from "@/hooks/use-user-tier";
+import { Show } from "@clerk/react";
 
 const AUTO_REFRESH_INTERVAL = 15000;
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
@@ -14,6 +16,7 @@ const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
 export function InboxPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { tier } = useUserTier();
 
   const [alias, setAlias] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -286,74 +289,113 @@ export function InboxPage() {
             </form>
           </div>
 
-          {/* Free vs Premium */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Free */}
-            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border">
-                <Unlock className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-sm text-foreground">Free</span>
-                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Preview only</span>
-              </div>
-              {/* Demo email */}
-              <div className="p-3 space-y-2">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-2">Sample inbox</p>
-                <div className="rounded-lg border border-border bg-background p-3 space-y-2 text-xs">
-                  <div className="flex items-start gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">F</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-semibold text-foreground truncate">Facebook</span>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">0 min ago</span>
+          {/* Plan section — dynamic based on auth + tier */}
+          <Show when="signed-out">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Free preview */}
+              <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border">
+                  <Unlock className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold text-sm text-foreground">Free</span>
+                  <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Preview only</span>
+                </div>
+                <div className="p-3 space-y-2">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-2">Sample inbox</p>
+                  <div className="rounded-lg border border-border bg-background p-3 space-y-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">F</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-foreground truncate">Facebook</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">0 min ago</span>
+                        </div>
+                        <p className="text-muted-foreground truncate">39522998 is your security code</p>
                       </div>
-                      <p className="text-muted-foreground truncate">39522998 is your security code</p>
+                    </div>
+                    <div className="border-t border-border pt-2 space-y-1.5">
+                      <p className="font-semibold text-foreground">Hi Anna Liza,</p>
+                      <p className="text-muted-foreground leading-relaxed">We're sending a security code to confirm it's really you. Here's your code:</p>
+                      <div className="text-center py-2">
+                        <span className="font-mono text-2xl font-bold tracking-[0.25em] text-violet-600 dark:text-violet-400">39522998</span>
+                      </div>
+                      <p className="text-muted-foreground text-[10px]">Don't share this code with anyone.</p>
                     </div>
                   </div>
-                  <div className="border-t border-border pt-2 space-y-1.5">
-                    <p className="font-semibold text-foreground">Hi Anna Liza,</p>
-                    <p className="text-muted-foreground leading-relaxed">We're sending a security code to confirm it's really you. Here's your code:</p>
-                    <div className="text-center py-2">
-                      <span className="font-mono text-2xl font-bold tracking-[0.25em] text-violet-600 dark:text-violet-400">39522998</span>
-                    </div>
-                    <p className="text-muted-foreground text-[10px]">Don't share this code with anyone.</p>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center pt-1">Receive OTPs &amp; verification codes — read only</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground text-center pt-1">Receive OTPs &amp; verification codes — read only</p>
+              </div>
+              {/* Premium preview */}
+              <div className="rounded-xl border border-violet-300 dark:border-violet-700 bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/40 dark:to-indigo-950/40 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-violet-200 dark:border-violet-800">
+                  <Star className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  <span className="font-semibold text-sm text-violet-700 dark:text-violet-300">Premium</span>
+                  <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-600 text-white">Full access</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <p className="text-[11px] text-violet-600/70 dark:text-violet-400/70 uppercase tracking-widest font-semibold">Everything in Free, plus</p>
+                  <ul className="space-y-2.5">
+                    {[
+                      { icon: Globe, text: "Use your own domain for signups" },
+                      { icon: UserCheck, text: "Create accounts on any platform" },
+                      { icon: ShieldCheck, text: "Receive all emails, not just OTPs" },
+                      { icon: Copy, text: "Unlimited aliases per domain" },
+                      { icon: Zap, text: "Real-time delivery via live stream" },
+                    ].map(({ icon: Icon, text }) => (
+                      <li key={text} className="flex items-center gap-2.5 text-sm text-violet-900 dark:text-violet-200">
+                        <Icon className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                        {text}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="w-full h-9 bg-violet-600 hover:bg-violet-700 text-white text-sm mt-2" onClick={() => setLocation("/sign-up")}>
+                    <LogIn className="w-3.5 h-3.5 mr-2" />
+                    Create account to get started
+                  </Button>
+                </div>
               </div>
             </div>
+          </Show>
 
-            {/* Premium */}
-            <div className="rounded-xl border border-violet-300 dark:border-violet-700 bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/40 dark:to-indigo-950/40 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-violet-200 dark:border-violet-800">
-                <Star className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                <span className="font-semibold text-sm text-violet-700 dark:text-violet-300">Premium</span>
-                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-600 text-white">Full access</span>
-              </div>
-              <div className="p-4 space-y-3">
-                <p className="text-[11px] text-violet-600/70 dark:text-violet-400/70 uppercase tracking-widest font-semibold">Everything in Free, plus</p>
-                <ul className="space-y-2.5">
-                  {[
-                    { icon: Globe, text: "Use your own domain for signups" },
-                    { icon: UserCheck, text: "Create accounts on any platform" },
-                    { icon: ShieldCheck, text: "Receive all emails, not just OTPs" },
-                    { icon: Copy, text: "Unlimited aliases per domain" },
-                    { icon: Zap, text: "Real-time delivery via live stream" },
-                  ].map(({ icon: Icon, text }) => (
-                    <li key={text} className="flex items-center gap-2.5 text-sm text-violet-900 dark:text-violet-200">
-                      <Icon className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                      {text}
-                    </li>
-                  ))}
-                </ul>
-                <div className="pt-2">
-                  <div className="rounded-lg border border-violet-200 dark:border-violet-700 bg-white/60 dark:bg-black/20 p-2.5 text-center">
-                    <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">Use <span className="font-mono font-bold">weyn.store</span> or <span className="font-mono font-bold">jhames.shop</span></p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Generate above &amp; start receiving instantly</p>
+          <Show when="signed-in">
+            {tier === "free" ? (
+              <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-border">
+                  <Unlock className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold text-sm text-foreground">Your plan: Free</span>
+                  <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Preview only</span>
+                </div>
+                <div className="p-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">You can view OTPs and verification codes. Contact the admin to upgrade to Premium for full inbox access.</p>
+                  <div className="rounded-lg border border-border bg-background p-3 space-y-2 text-xs mt-2">
+                    <div className="flex items-start gap-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] shrink-0">F</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-foreground truncate">Facebook</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">0 min ago</span>
+                        </div>
+                        <p className="text-muted-foreground truncate">39522998 is your security code</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-border pt-2 text-center py-3">
+                      <span className="font-mono text-2xl font-bold tracking-[0.25em] text-violet-600 dark:text-violet-400">39522998</span>
+                      <p className="text-[10px] text-muted-foreground mt-1">Sample — your real codes will appear here</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            ) : (
+              <div className="rounded-xl border border-violet-300 dark:border-violet-700 bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/40 dark:to-indigo-950/40 shadow-sm p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center shrink-0">
+                  <Crown className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-violet-800 dark:text-violet-200">Premium — Full access active</p>
+                  <p className="text-xs text-violet-600/70 dark:text-violet-400/70">Use any alias on <span className="font-mono font-bold">weyn.store</span> or <span className="font-mono font-bold">jhames.shop</span> to receive all emails instantly.</p>
+                </div>
+              </div>
+            )}
+          </Show>
 
           {/* Header row */}
           <div className="flex items-center justify-between">

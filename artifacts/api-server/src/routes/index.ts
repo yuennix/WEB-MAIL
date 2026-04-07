@@ -5,6 +5,8 @@ import emailsRouter from "./emails";
 import webhookRouter from "./webhook";
 import testRouter from "./test";
 import eventsRouter from "./events";
+import usersRouter from "./users";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use(emailsRouter);
 router.use(webhookRouter);
 router.use(testRouter);
 router.use(eventsRouter);
+router.use(usersRouter);
+router.use(adminRouter);
 
 export default router;

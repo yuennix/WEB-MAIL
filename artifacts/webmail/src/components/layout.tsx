@@ -1,13 +1,20 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Inbox, Globe, Mail, Menu, X, Moon, Sun } from "lucide-react";
+import { Inbox, Globe, Mail, Menu, X, Moon, Sun, Shield, LogIn, LogOut, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { useUser, useClerk, Show } from "@clerk/react";
+import { useUserTier } from "@/hooks/use-user-tier";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const { tier, isAdmin } = useUserTier();
 
   const navItems = [
     { href: "/", label: "Inbox", icon: Inbox },
@@ -15,6 +22,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+
+  const handleSignOut = () => signOut({ redirectUrl: `${basePath}/` });
+
+  const TierBadge = () => (
+    tier === "premium" ? (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+        <Crown className="w-2.5 h-2.5" /> Premium
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">
+        Free
+      </span>
+    )
+  );
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col md:flex-row bg-background">
@@ -57,6 +78,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            <Show when="signed-in">
+              {isAdmin && (
+                <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+                  <Shield className="w-4 h-4" /> Admin
+                </Link>
+              )}
+              <div className="px-3 py-2 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{user?.firstName || user?.username}</p>
+                  <TierBadge />
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 text-xs shrink-0">
+                  <LogOut className="w-3.5 h-3.5 mr-1" /> Sign out
+                </Button>
+              </div>
+            </Show>
+            <Show when="signed-out">
+              <button onClick={() => { setLocation("/sign-in"); setMobileMenuOpen(false); }} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground w-full">
+                <LogIn className="w-4 h-4" /> Sign in
+              </button>
+            </Show>
           </div>
         )}
       </header>
@@ -91,31 +133,58 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <item.icon
-                  className={`w-4 h-4 transition-colors ${
-                    active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground/70 group-hover:text-foreground"
-                  }`}
-                />
+                <item.icon className={`w-4 h-4 transition-colors ${active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground/70 group-hover:text-foreground"}`} />
                 {item.label}
                 {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-500" />}
               </Link>
             );
           })}
+          <Show when="signed-in">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
+                  location === "/admin"
+                    ? "bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+                {location === "/admin" && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-500" />}
+              </Link>
+            )}
+          </Show>
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground font-mono">v1.0.0</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
-            onClick={toggleTheme}
-            title="Toggle theme"
-          >
-            <Sun className="w-4 h-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute w-4 h-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          </Button>
+        {/* User / Auth Footer */}
+        <div className="p-4 border-t border-border space-y-3">
+          <Show when="signed-in">
+            <div className="flex items-center gap-2 px-1">
+              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-700 dark:text-violet-300 font-bold text-sm shrink-0">
+                {(user?.firstName?.[0] || user?.username?.[0] || "U").toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold truncate">{user?.firstName || user?.username || "User"}</p>
+                <TierBadge />
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground" onClick={handleSignOut} title="Sign out">
+                <LogOut className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </Show>
+          <Show when="signed-out">
+            <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setLocation("/sign-in")}>
+              <LogIn className="w-3.5 h-3.5 mr-2" /> Sign in / Register
+            </Button>
+          </Show>
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] text-muted-foreground font-mono">v1.0.0</span>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={toggleTheme} title="Toggle theme">
+              <Sun className="w-4 h-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute w-4 h-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
+          </div>
         </div>
       </aside>
 
