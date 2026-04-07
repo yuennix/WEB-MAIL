@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2, UserPlus, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2, UserPlus, ChevronDown, ChevronUp, Globe } from "lucide-react";
 import { DomainsPage } from "@/pages/domains";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
@@ -59,6 +59,7 @@ export function AdminPage() {
   const [importEmails, setImportEmails] = useState("");
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [activeTab, setActiveTab] = useState<"users" | "domains">("users");
 
   const storedPassword = (): string => sessionStorage.getItem(SESSION_KEY) ?? "";
 
@@ -290,22 +291,12 @@ export function AdminPage() {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Shield className="w-6 h-6 text-violet-600" />
           <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setShowImport((v) => !v); setImportMsg(""); }}
-            className="text-violet-700 border-violet-300 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-800 dark:hover:bg-violet-900/20"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add Users
-            {showImport ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -324,6 +315,50 @@ export function AdminPage() {
           </Button>
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          onClick={() => setActiveTab("users")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+            activeTab === "users"
+              ? "border-violet-600 text-violet-600 dark:text-violet-400"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Users
+        </button>
+        <button
+          onClick={() => setActiveTab("domains")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+            activeTab === "domains"
+              ? "border-violet-600 text-violet-600 dark:text-violet-400"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Globe className="w-4 h-4" />
+          Domains
+        </button>
+        {/* Add Users — only on Users tab */}
+        {activeTab === "users" && (
+          <div className="ml-auto pb-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setShowImport((v) => !v); setImportMsg(""); }}
+              className="text-violet-700 border-violet-300 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-800 dark:hover:bg-violet-900/20"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add Users
+              {showImport ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ── USERS TAB ── */}
+      {activeTab === "users" && (<>
 
       {/* Import users panel */}
       {showImport && (
@@ -512,10 +547,12 @@ export function AdminPage() {
         )}
       </div>
 
-      {/* Domains Management */}
-      <div className="border-t border-border pt-2">
+      </>)}
+
+      {/* ── DOMAINS TAB ── */}
+      {activeTab === "domains" && (
         <DomainsPage />
-      </div>
+      )}
     </div>
   );
 }
