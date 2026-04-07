@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "maildrop-admin-2024";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "yuenaquino17";
 
 function checkAdminPassword(req: any, res: any, next: any) {
   const pwd = req.headers["x-admin-password"] as string | undefined;
