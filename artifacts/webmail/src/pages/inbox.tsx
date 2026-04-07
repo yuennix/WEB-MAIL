@@ -346,7 +346,7 @@ export function InboxPage() {
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5">
               <Crown className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                <span className="font-semibold">Free plan</span> — Facebook 8-digit codes only
+                <span className="font-semibold">Free plan</span> — Facebook 8-digit security codes. Unlock premium to access all emails.
               </p>
             </div>
           )}
