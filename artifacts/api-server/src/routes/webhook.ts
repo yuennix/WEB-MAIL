@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
-import { db, emailsTable, domainsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, emailsTable, domainsTable, usersTable } from "@workspace/db";
+import { eq, count } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { broadcastNewEmail } from "../lib/sse";
 
@@ -140,5 +140,56 @@ router.post(
     }
   }
 );
+
+// Clerk user.created webhook — configure in Clerk Dashboard → Webhooks
+// Endpoint: POST /api/webhook/clerk
+router.post("/webhook/clerk", async (req, res): Promise<void> => {
+  try {
+    const event = req.body as { type?: string; data?: { id?: string; email_addresses?: { email_address: string }[]; username?: string } };
+    if (event.type !== "user.created" && event.type !== "user.updated") {
+      res.json({ ok: true, skipped: true });
+      return;
+    }
+
+    const clerkId = event.data?.id;
+    const email = event.data?.email_addresses?.[0]?.email_address ?? "";
+    const username = event.data?.username ?? null;
+
+    if (!clerkId) {
+      res.status(400).json({ error: "Missing user id" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, clerkId));
+
+    if (existing) {
+      await db.update(usersTable)
+        .set({ email: email || existing.email, username: username ?? existing.username })
+        .where(eq(usersTable.clerkId, clerkId));
+      res.json({ ok: true, action: "updated" });
+      return;
+    }
+
+    const [{ count: dbCount }] = await db.select({ count: count() }).from(usersTable);
+    const isFirst = Number(dbCount) === 0;
+
+    await db.insert(usersTable).values({
+      clerkId,
+      email,
+      username,
+      tier: isFirst ? "premium" : "free",
+      isAdmin: isFirst,
+    });
+
+    logger.info({ clerkId, email }, "User created via Clerk webhook");
+    res.json({ ok: true, action: "created" });
+  } catch (err) {
+    logger.error({ err }, "Clerk webhook error");
+    res.status(500).json({ error: "Internal error" });
+  }
+});
 
 export default router;

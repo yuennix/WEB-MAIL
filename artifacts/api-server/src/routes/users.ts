@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, count } from "drizzle-orm";
+import { eq, count, or } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -56,16 +56,23 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
     return;
   }
 
+  // Match by clerkId first; fall back to email (catches manually-added users)
+  const conditions = [eq(usersTable.clerkId, clerkId)];
+  if (email) conditions.push(eq(usersTable.email, email));
   const [existing] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.clerkId, clerkId));
+    .where(or(...conditions));
 
   if (existing) {
     const [updated] = await db
       .update(usersTable)
-      .set({ email: email ?? existing.email, username: username ?? existing.username })
-      .where(eq(usersTable.clerkId, clerkId))
+      .set({
+        clerkId,
+        email: email ?? existing.email,
+        username: username ?? existing.username,
+      })
+      .where(eq(usersTable.id, existing.id))
       .returning();
 
     // Auto-expire premium

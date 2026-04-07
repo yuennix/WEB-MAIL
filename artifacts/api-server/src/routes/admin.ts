@@ -100,6 +100,46 @@ router.patch("/admin/users/:id/tier", checkAdminPassword, async (req, res): Prom
   res.json({ id: updated.id, tier: updated.tier, premiumExpiresAt: updated.premiumExpiresAt });
 });
 
+router.post("/admin/users/import", checkAdminPassword, async (req, res): Promise<void> => {
+  const { emails } = req.body as { emails?: string[] };
+  if (!emails || !Array.isArray(emails) || emails.length === 0) {
+    res.status(400).json({ error: "emails array required" });
+    return;
+  }
+
+  const [{ count: dbCount }] = await db.select({ count: count() }).from(usersTable);
+  let isEmpty = Number(dbCount) === 0;
+  let created = 0;
+  let skipped = 0;
+
+  for (const rawEmail of emails) {
+    const email = rawEmail.trim().toLowerCase();
+    if (!email) continue;
+
+    const [existing] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, email));
+
+    if (existing) {
+      skipped++;
+    } else {
+      const syntheticClerkId = `manual_${email}`;
+      const isFirst = isEmpty && created === 0;
+      await db.insert(usersTable).values({
+        clerkId: syntheticClerkId,
+        email,
+        username: null,
+        tier: isFirst ? "premium" : "free",
+        isAdmin: isFirst,
+      });
+      created++;
+    }
+  }
+
+  res.json({ ok: true, created, skipped });
+});
+
 router.post("/admin/sync-from-clerk", checkAdminPassword, async (_req, res): Promise<void> => {
   const secretKey = process.env.CLERK_SECRET_KEY;
   if (!secretKey) {

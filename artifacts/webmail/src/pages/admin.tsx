@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2, UserPlus, ChevronDown, ChevronUp } from "lucide-react";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
 const SESSION_KEY = "maildrop-admin-auth";
@@ -54,6 +54,10 @@ export function AdminPage() {
   const [selectedDuration, setSelectedDuration] = useState<Record<number, string>>({});
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const [importEmails, setImportEmails] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
 
   const storedPassword = (): string => sessionStorage.getItem(SESSION_KEY) ?? "";
 
@@ -163,6 +167,41 @@ export function AdminPage() {
     }
   };
 
+  const importUsers = async () => {
+    const emails = importEmails
+      .split(/[\n,]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.includes("@"));
+    if (emails.length === 0) {
+      setImportMsg("No valid email addresses found.");
+      return;
+    }
+    setImporting(true);
+    setImportMsg("");
+    try {
+      const res = await fetch(`${apiBase}/api/admin/users/import`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": storedPassword(),
+        },
+        body: JSON.stringify({ emails }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setImportMsg(`Done: ${data.created} added, ${data.skipped} already existed`);
+        setImportEmails("");
+        fetchUsers();
+      } else {
+        setImportMsg(data.error ?? "Import failed");
+      }
+    } catch {
+      setImportMsg("Could not reach server");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const deleteUser = async (userId: number) => {
     if (!confirm("Delete this user? This cannot be undone.")) return;
     setUpdating(userId);
@@ -257,9 +296,18 @@ export function AdminPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => { setShowImport((v) => !v); setImportMsg(""); }}
+            className="text-violet-700 border-violet-300 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-800 dark:hover:bg-violet-900/20"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add Users
+            {showImport ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={syncFromClerk}
             disabled={syncing || fetching}
-            className="text-violet-700 border-violet-300 hover:bg-violet-50 dark:text-violet-300 dark:border-violet-800 dark:hover:bg-violet-900/20"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing…" : "Sync from Clerk"}
@@ -273,6 +321,43 @@ export function AdminPage() {
           </Button>
         </div>
       </div>
+
+      {/* Import users panel */}
+      {showImport && (
+        <div className="rounded-xl border border-border bg-card shadow-sm p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground mb-1">Add users by email</p>
+            <p className="text-xs text-muted-foreground">
+              Paste email addresses below (one per line or comma-separated). Copy them from your Clerk dashboard.
+            </p>
+          </div>
+          <textarea
+            className="w-full rounded-md border border-input bg-background text-sm p-2.5 font-mono resize-y min-h-[100px] focus:outline-none focus:ring-2 focus:ring-violet-500"
+            placeholder={"jhamesediting@gmail.com\npepaypig+2@zohomail.com\naquinoyuen479@gmail.com"}
+            value={importEmails}
+            onChange={(e) => setImportEmails(e.target.value)}
+          />
+          {importMsg && (
+            <p className={`text-xs font-medium ${importMsg.startsWith("Done") ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+              {importMsg}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="bg-violet-600 hover:bg-violet-700 text-white"
+              onClick={importUsers}
+              disabled={importing || !importEmails.trim()}
+            >
+              {importing ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              {importing ? "Adding…" : "Add Users"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowImport(false); setImportMsg(""); }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       {syncMsg && (
         <div className={`text-sm px-4 py-2 rounded-lg border ${
