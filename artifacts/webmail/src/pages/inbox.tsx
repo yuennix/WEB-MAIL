@@ -213,22 +213,15 @@ export function InboxPage() {
   const allEmails = emailsData?.emails ?? [];
   const unread = statsData?.unreadEmails ?? 0;
 
-  // Free-tier filter: only 8-digit security codes from Facebook
+  // Free-tier filter: must be FROM Facebook AND contain an 8-digit code
   const isFacebookSecurityCode = (e: { from?: string; subject?: string; preview?: string }) => {
-    const combined = [e.from, e.subject, e.preview].join(" ").toLowerCase();
-    const fromFacebook = combined.includes("facebook");
+    const allText = [e.from, e.subject, e.preview].join(" ").toLowerCase();
+    const fromFacebook = allText.includes("facebook") || e.from?.toLowerCase().includes("@facebookmail.com");
     const has8DigitCode = /\b\d{8}\b/.test([e.subject, e.preview].join(" "));
-    const hasCodeKeyword =
-      combined.includes("security code") ||
-      combined.includes("confirmation code") ||
-      combined.includes("login code") ||
-      combined.includes("log in code") ||
-      combined.includes("is your code") ||
-      combined.includes("your code");
-    return fromFacebook && (has8DigitCode || hasCodeKeyword);
+    return fromFacebook && has8DigitCode;
   };
 
-  // Free-tier users only see Facebook 8-digit security code emails
+  // Free: only Facebook 8-digit security code emails. Premium: all emails.
   const tierFiltered =
     tier === "free" ? allEmails.filter(isFacebookSecurityCode) : allEmails;
 
@@ -353,9 +346,9 @@ export function InboxPage() {
             <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
               <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Free plan — Facebook codes only</p>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Free plan — Facebook 8-digit codes only</p>
                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                  Your inbox only shows Facebook 8-digit security code emails. Upgrade to Premium for full access to all emails.
+                  Only Facebook emails containing an 8-digit security code are shown. Upgrade to Premium for unrestricted access to all emails.
                 </p>
               </div>
             </div>

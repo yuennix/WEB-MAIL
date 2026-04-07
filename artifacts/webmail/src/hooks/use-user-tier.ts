@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/react";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
@@ -20,6 +20,24 @@ export function useUserTier() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const sync = useCallback(async () => {
+    if (!isLoaded || !isSignedIn || !user) return;
+    const clerkId = user.id ?? "";
+    const email = user.primaryEmailAddress?.emailAddress ?? "";
+    const username = user.username ?? user.firstName ?? null;
+    try {
+      const r = await fetch(`${apiBase}/api/users/me/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clerkId, email, username }),
+      });
+      const data = await r.json();
+      setProfile(data as UserProfile);
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoaded, isSignedIn, user]);
+
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -27,23 +45,8 @@ export function useUserTier() {
       setLoading(false);
       return;
     }
-
-    const clerkId = user?.id ?? "";
-    const email = user?.primaryEmailAddress?.emailAddress ?? "";
-    const username = user?.username ?? user?.firstName ?? null;
-
-    fetch(`${apiBase}/api/users/me/sync`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clerkId, email, username }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        setProfile(data as UserProfile);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [isLoaded, isSignedIn, user]);
+    sync();
+  }, [isLoaded, isSignedIn, sync]);
 
   return {
     profile,
@@ -51,5 +54,6 @@ export function useUserTier() {
     tier: profile?.tier ?? "free",
     isAdmin: profile?.isAdmin ?? false,
     premiumExpiresAt: profile?.premiumExpiresAt ?? null,
+    refresh: sync,
   };
 }

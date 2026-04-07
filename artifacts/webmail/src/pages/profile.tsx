@@ -1,16 +1,75 @@
+import { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
-import { Crown, LogOut, Mail, User, Calendar, Shield } from "lucide-react";
+import { Crown, LogOut, Mail, User, Calendar, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserTier } from "@/hooks/use-user-tier";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+function useCountdown(premiumExpiresAt: string | null, onExpired: () => void) {
+  const [display, setDisplay] = useState<string | null>(null);
+  const [urgent, setUrgent] = useState(false);
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    if (!premiumExpiresAt) {
+      setDisplay(null);
+      return;
+    }
+
+    let didExpire = false;
+
+    const tick = () => {
+      const now = Date.now();
+      const end = new Date(premiumExpiresAt).getTime();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        setDisplay("Expired");
+        setUrgent(true);
+        setExpired(true);
+        if (!didExpire) {
+          didExpire = true;
+          onExpired();
+        }
+        return;
+      }
+
+      const totalSec = Math.floor(diff / 1000);
+      const days = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const minutes = Math.floor((totalSec % 3600) / 60);
+      const seconds = totalSec % 60;
+
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setDisplay(
+        days > 0
+          ? `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`
+          : `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`
+      );
+      setUrgent(days < 1);
+      setExpired(false);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [premiumExpiresAt, onExpired]);
+
+  return { display, urgent, expired };
+}
+
 export function ProfilePage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const { signOut } = useClerk();
   const [, setLocation] = useLocation();
-  const { profile, tier, premiumExpiresAt, isAdmin, loading } = useUserTier();
+  const { profile, tier, premiumExpiresAt, isAdmin, loading, refresh } = useUserTier();
+
+  const { display: countdownDisplay, urgent: countdownUrgent, expired: countdownExpired } = useCountdown(
+    premiumExpiresAt,
+    refresh
+  );
 
   if (!isLoaded || loading) {
     return (
@@ -40,21 +99,6 @@ export function ProfilePage() {
     ? `${user.firstName}${user.lastName ? " " + user.lastName : ""}`
     : user.username || "User";
   const email = user.primaryEmailAddress?.emailAddress ?? profile?.email ?? "";
-  const joinedAt = profile?.createdAt ? new Date(profile.createdAt) : null;
-
-  const expiryInfo = (): { label: string; urgent: boolean } | null => {
-    if (!premiumExpiresAt) return null;
-    const d = new Date(premiumExpiresAt);
-    const now = new Date();
-    if (d < now) return { label: "Expired", urgent: true };
-    const diff = d.getTime() - now.getTime();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    if (days === 1) return { label: "Expires tomorrow", urgent: true };
-    if (days <= 3) return { label: `Expires in ${days} days`, urgent: true };
-    return { label: `Expires in ${days} days`, urgent: false };
-  };
-
-  const expiry = expiryInfo();
 
   return (
     <div className="max-w-lg mx-auto p-6 space-y-5">
@@ -70,7 +114,7 @@ export function ProfilePage() {
       </div>
 
       {/* Tier card */}
-      <div className={`rounded-xl border p-4 flex items-center gap-4 ${
+      <div className={`rounded-xl border p-4 flex items-start gap-4 ${
         tier === "premium"
           ? "border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20"
           : "border-border bg-card"
@@ -92,12 +136,17 @@ export function ProfilePage() {
           <p className="text-xs text-muted-foreground mt-0.5">
             {tier === "premium"
               ? "Full inbox access — all emails visible"
-              : "Limited to Facebook security code emails"}
+              : "Limited to Facebook 8-digit security code emails"}
           </p>
-          {expiry && (
-            <p className={`text-xs font-semibold mt-1 ${expiry.urgent ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-              {expiry.label}
-            </p>
+
+          {/* Live countdown for premium */}
+          {tier === "premium" && countdownDisplay && (
+            <div className={`mt-2 flex items-center gap-1.5 ${countdownUrgent ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span className={`text-xs font-mono font-bold ${countdownExpired ? "text-red-600 dark:text-red-400" : ""}`}>
+                {countdownExpired ? "Expired — downgrading…" : countdownDisplay}
+              </span>
+            </div>
           )}
         </div>
         <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
@@ -125,18 +174,6 @@ export function ProfilePage() {
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground font-medium">Username</p>
               <p className="text-sm font-semibold text-foreground">{user.username || profile?.username}</p>
-            </div>
-          </div>
-        )}
-
-        {joinedAt && (
-          <div className="flex items-center gap-3 px-4 py-3">
-            <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Member since</p>
-              <p className="text-sm font-semibold text-foreground">
-                {joinedAt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-              </p>
             </div>
           </div>
         )}
