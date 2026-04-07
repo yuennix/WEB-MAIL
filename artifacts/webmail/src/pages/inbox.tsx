@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Lock, Crown } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useUserTier } from "@/hooks/use-user-tier";
+import { useUser } from "@clerk/react";
 
 const AUTO_REFRESH_INTERVAL = 15000;
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
@@ -16,6 +17,7 @@ export function InboxPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { tier } = useUserTier();
+  const { isSignedIn, isLoaded } = useUser();
 
   const [alias, setAlias] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -204,6 +206,40 @@ export function InboxPage() {
       })
     : tierFiltered;
 
+  // Auth gate — must be after all hooks
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-[100dvh]">
+        <div className="w-8 h-8 rounded-full border-4 border-violet-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] p-8 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg mb-6">
+          <Lock className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Sign in to access MailDrop</h2>
+        <p className="text-muted-foreground text-sm mb-8 max-w-sm">
+          Create an account or sign in to start receiving emails on your custom domain.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            className="bg-violet-600 hover:bg-violet-700 text-white px-8"
+            onClick={() => setLocation("/sign-in")}
+          >
+            Sign in
+          </Button>
+          <Button variant="outline" className="px-8" onClick={() => setLocation("/sign-up")}>
+            Create account
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col min-h-[100dvh]">
       {/* Top bar */}
@@ -295,6 +331,19 @@ export function InboxPage() {
               </Button>
             </form>
           </div>
+
+          {/* Free-tier restriction notice */}
+          {tier === "free" && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3">
+              <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Free plan — Facebook codes only</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                  Your inbox only shows Facebook 8-digit security code emails. Upgrade to Premium for full access to all emails.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Header row */}
           <div className="flex items-center justify-between">

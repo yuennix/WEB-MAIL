@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2, UserPlus, ChevronDown, ChevronUp } from "lucide-react";
+import { DomainsPage } from "@/pages/domains";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
 const SESSION_KEY = "maildrop-admin-auth";
@@ -509,6 +510,11 @@ export function AdminPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Domains Management */}
+      <div className="border-t border-border pt-2">
+        <DomainsPage />
       </div>
     </div>
   );

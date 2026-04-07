@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Inbox, Globe, Mail, Menu, X, Moon, Sun, Shield, LogIn, LogOut, Crown, UserCircle } from "lucide-react";
+import { Inbox, Mail, Menu, X, Moon, Sun, Shield, LogIn, LogOut, Crown, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useUser, useClerk, Show } from "@clerk/react";
@@ -18,7 +18,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: "/", label: "Inbox", icon: Inbox },
-    { href: "/domains", label: "Domains", icon: Globe },
   ];
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
