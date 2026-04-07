@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSignUp } from "@clerk/react";
+import { useSignUp, useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 import { Mail, CheckCircle, Zap, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function SignUpPage() {
-  const { isLoaded, signUp, setActive } = useSignUp();
+  const { isLoaded, signUp } = useSignUp();
+  const { setActive } = useClerk();
   const [, setLocation] = useLocation();
 
   const [email, setEmail] = useState("");
@@ -30,7 +31,7 @@ export function SignUpPage() {
     try {
       const result = await signUp!.create({ emailAddress: email, password });
       if (result.status === "complete") {
-        await setActive!({ session: result.createdSessionId });
+        await setActive({ session: result.createdSessionId });
         setLocation("/");
       } else {
         await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
@@ -51,7 +52,7 @@ export function SignUpPage() {
     try {
       const result = await signUp!.attemptEmailAddressVerification({ code });
       if (result.status === "complete") {
-        await setActive!({ session: result.createdSessionId });
+        await setActive({ session: result.createdSessionId });
         setLocation("/");
       }
     } catch (err: any) {
