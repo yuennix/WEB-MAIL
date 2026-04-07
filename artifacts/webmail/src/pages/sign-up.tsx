@@ -96,7 +96,7 @@ export function SignUpPage() {
         <div className="flex items-center gap-1.5 bg-yellow-400/10 backdrop-blur-sm border border-yellow-300/25 rounded-full px-3 py-1.5">
           <Zap className="w-3 h-3 text-yellow-300 shrink-0" />
           <span className="text-yellow-200 font-bold text-xs">PREMIUM</span>
-          <span className="text-white/55 text-xs">— all emails, unlimited</span>
+          <span className="text-white/55 text-xs">— all platforms, no limitation.</span>
         </div>
       </div>
 
