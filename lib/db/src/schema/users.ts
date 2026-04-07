@@ -10,6 +10,7 @@ export const usersTable = pgTable("users", {
   tier: text("tier").notNull().default("free"),
   isAdmin: boolean("is_admin").notNull().default(false),
   premiumExpiresAt: timestamp("premium_expires_at", { withTimezone: true }),
+  sessionToken: text("session_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

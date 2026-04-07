@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import { useUser } from "@clerk/react";
+import { useUser, useClerk } from "@clerk/react";
+import { useToast } from "@/hooks/use-toast";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
+const basePath = (import.meta.env.BASE_URL as string || "/").replace(/\/$/, "");
 
 export type Tier = "free" | "premium";
 
@@ -15,8 +17,14 @@ export interface UserProfile {
   premiumExpiresAt: string | null;
 }
 
+function sessionKey(clerkId: string) {
+  return `weyn_session_${clerkId}`;
+}
+
 export function useUserTier() {
   const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,18 +33,48 @@ export function useUserTier() {
     const clerkId = user.id ?? "";
     const email = user.primaryEmailAddress?.emailAddress ?? "";
     const username = user.username ?? user.firstName ?? null;
+
+    // Read stored session token for this account
+    const storedToken = localStorage.getItem(sessionKey(clerkId)) ?? undefined;
+
     try {
       const r = await fetch(`${apiBase}/api/users/me/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clerkId, email, username }),
+        body: JSON.stringify({ clerkId, email, username, sessionToken: storedToken }),
       });
-      const data = await r.json();
-      setProfile(data as UserProfile);
+      const data = await r.json() as UserProfile & { sessionToken?: string | null; kicked?: boolean };
+
+      if (data.kicked) {
+        // Another device logged in — sign this device out
+        localStorage.removeItem(sessionKey(clerkId));
+        toast({
+          title: "Signed out",
+          description: "Your account was signed in on another device.",
+          variant: "destructive",
+        });
+        await signOut({ redirectUrl: `${basePath}/sign-in` });
+        return;
+      }
+
+      // Store the (possibly new) session token
+      if (data.sessionToken) {
+        localStorage.setItem(sessionKey(clerkId), data.sessionToken);
+      }
+
+      setProfile({
+        id: data.id,
+        clerkId: data.clerkId,
+        email: data.email,
+        username: data.username,
+        tier: data.tier,
+        isAdmin: data.isAdmin,
+        premiumExpiresAt: data.premiumExpiresAt ?? null,
+      });
     } finally {
       setLoading(false);
     }
-  }, [isLoaded, isSignedIn, user]);
+  }, [isLoaded, isSignedIn, user, signOut, toast]);
 
   useEffect(() => {
     if (!isLoaded) return;
