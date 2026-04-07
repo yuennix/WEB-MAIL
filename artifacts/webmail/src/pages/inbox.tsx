@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ export function InboxPage() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [liveConnected, setLiveConnected] = useState(false);
   const [domainOpen, setDomainOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const esRef = useRef<EventSource | null>(null);
   const domainRef = useRef<HTMLDivElement>(null);
 
@@ -163,8 +164,18 @@ export function InboxPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const emails = emailsData?.emails ?? [];
+  const allEmails = emailsData?.emails ?? [];
   const unread = statsData?.unreadEmails ?? 0;
+  const emails = search.trim()
+    ? allEmails.filter((e) => {
+        const q = search.toLowerCase();
+        return (
+          e.from?.toLowerCase().includes(q) ||
+          e.subject?.toLowerCase().includes(q) ||
+          e.preview?.toLowerCase().includes(q)
+        );
+      })
+    : allEmails;
 
   return (
     <div className="h-full flex flex-col min-h-[100dvh]">
@@ -302,6 +313,28 @@ export function InboxPage() {
             )}
           </div>
 
+          {/* Search bar — only show when inbox is active */}
+          {activeAddress && allEmails.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Search by sender, subject or content…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-9 h-10 bg-card border-border text-sm"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Email list */}
           {isLoadingEmails ? (
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden divide-y divide-border">
@@ -349,7 +382,7 @@ export function InboxPage() {
                 </div>
               )}
             </div>
-          ) : emails.length === 0 ? (
+          ) : allEmails.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center px-4">
               <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-6">
                 <Inbox className="w-9 h-9 text-muted-foreground/40" />
@@ -365,6 +398,14 @@ export function InboxPage() {
                   Connected live — no refresh needed
                 </p>
               )}
+            </div>
+          ) : emails.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+              <Search className="w-8 h-8 text-muted-foreground/40 mb-4" />
+              <h2 className="text-base font-semibold mb-1">No results for "{search}"</h2>
+              <button onClick={() => setSearch("")} className="text-sm text-violet-600 dark:text-violet-400 hover:underline mt-1">
+                Clear search
+              </button>
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden divide-y divide-border">
