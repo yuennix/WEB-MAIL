@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Inbox, Globe, Mail, Menu, X, Moon, Sun, Shield, LogIn, LogOut, Crown } from "lucide-react";
+import { Inbox, Globe, Mail, Menu, X, Moon, Sun, Shield, LogIn, LogOut, Crown, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useUser, useClerk, Show } from "@clerk/react";
@@ -94,6 +94,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Shield className="w-4 h-4" /> Admin
             </Link>
             <Show when="signed-in">
+              <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
+                <UserCircle className="w-4 h-4" /> Profile
+              </Link>
               <div className="px-3 py-2 flex items-center gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{user?.firstName || user?.username}</p>
@@ -166,18 +169,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* User / Auth Footer */}
         <div className="p-4 border-t border-border space-y-3">
           <Show when="signed-in">
-            <div className="flex items-center gap-2 px-1">
-              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-700 dark:text-violet-300 font-bold text-sm shrink-0">
+            <Link href="/profile" className="flex items-center gap-2 px-1 rounded-lg hover:bg-muted transition-colors cursor-pointer group">
+              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-700 dark:text-violet-300 font-bold text-sm shrink-0 group-hover:bg-violet-200 dark:group-hover:bg-violet-800/60 transition-colors">
                 {(user?.firstName?.[0] || user?.username?.[0] || "U").toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{user?.firstName || user?.username || "User"}</p>
                 <TierBadge />
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground" onClick={handleSignOut} title="Sign out">
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500" onClick={(e) => { e.preventDefault(); handleSignOut(); }} title="Sign out">
                 <LogOut className="w-3.5 h-3.5" />
               </Button>
-            </div>
+            </Link>
           </Show>
           <Show when="signed-out">
             <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setLocation("/sign-in")}>

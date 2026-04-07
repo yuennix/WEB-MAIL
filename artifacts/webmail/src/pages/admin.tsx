@@ -189,7 +189,9 @@ export function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setImportMsg(`Done: ${data.created} added, ${data.skipped} already existed`);
+        let msg = `Done: ${data.created} added, ${data.skipped} already existed`;
+        if (data.notInClerk?.length) msg += ` · Not in Clerk: ${data.notInClerk.join(", ")}`;
+        setImportMsg(msg);
         setImportEmails("");
         fetchUsers();
       } else {

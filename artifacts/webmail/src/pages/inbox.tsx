@@ -39,16 +39,7 @@ export function InboxPage() {
     }
   }, [domains, selectedDomain]);
 
-  // Restore last used address
-  useEffect(() => {
-    const saved = localStorage.getItem("webmail-address");
-    if (saved && saved.includes("@")) {
-      const [savedAlias, savedDomain] = saved.split("@");
-      setAlias(savedAlias);
-      setSelectedDomain(savedDomain);
-      setActiveAddress(saved);
-    }
-  }, []);
+  // Do not auto-restore last address — always start fresh
 
   // Close domain dropdown on outside click
   useEffect(() => {
@@ -139,7 +130,6 @@ export function InboxPage() {
     const addr = `${prefix}@${domain}`;
     setAlias(prefix);
     setActiveAddress(addr);
-    localStorage.setItem("webmail-address", addr);
   };
 
   const generatePrefix = () => {
@@ -157,7 +147,6 @@ export function InboxPage() {
     const addr = `${prefix}@${domain}`;
     setAlias(prefix);
     setActiveAddress(addr);
-    localStorage.setItem("webmail-address", addr);
   };
 
   const openDirectInbox = (e: React.FormEvent) => {
@@ -172,7 +161,6 @@ export function InboxPage() {
     setSelectedDomain(d);
     setActiveAddress(val);
     setSearch("");
-    localStorage.setItem("webmail-address", val);
     setDirectInput("");
   };
 
@@ -429,7 +417,6 @@ export function InboxPage() {
                         const addr = `${prefix}@${d.name}`;
                         setAlias(prefix);
                         setActiveAddress(addr);
-                        localStorage.setItem("webmail-address", addr);
                       }}
                       className="px-4 py-2 rounded-full border border-border bg-card hover:bg-muted hover:border-violet-300 dark:hover:border-violet-700 transition-colors text-sm font-mono text-muted-foreground hover:text-foreground"
                     >

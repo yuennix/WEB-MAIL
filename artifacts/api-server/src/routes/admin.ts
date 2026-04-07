@@ -107,27 +107,52 @@ router.post("/admin/users/import", checkAdminPassword, async (req, res): Promise
     return;
   }
 
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  const clerkClient = secretKey ? createClerkClient({ secretKey }) : null;
+
   const [{ count: dbCount }] = await db.select({ count: count() }).from(usersTable);
   let isEmpty = Number(dbCount) === 0;
   let created = 0;
   let skipped = 0;
+  const notInClerk: string[] = [];
 
   for (const rawEmail of emails) {
     const email = rawEmail.trim().toLowerCase();
     if (!email) continue;
 
-    const [existing] = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.email, email));
-
-    if (existing) {
-      skipped++;
-    } else {
-      const syntheticClerkId = `manual_${email}`;
+    // If Clerk SDK is available, verify the email is actually registered in Clerk
+    if (clerkClient) {
+      const results = await clerkClient.users.getUserList({ emailAddress: [email], limit: 1 });
+      if (results.data.length === 0) {
+        notInClerk.push(email);
+        continue;
+      }
+      // Use the real Clerk ID + username if available
+      const clerkUser = results.data[0];
+      const [existing] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.clerkId, clerkUser.id));
+      if (existing) { skipped++; continue; }
       const isFirst = isEmpty && created === 0;
       await db.insert(usersTable).values({
-        clerkId: syntheticClerkId,
+        clerkId: clerkUser.id,
+        email,
+        username: clerkUser.username ?? null,
+        tier: isFirst ? "premium" : "free",
+        isAdmin: isFirst,
+      });
+      created++;
+    } else {
+      // No Clerk SDK — fallback: add with synthetic ID
+      const [existing] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, email));
+      if (existing) { skipped++; continue; }
+      const isFirst = isEmpty && created === 0;
+      await db.insert(usersTable).values({
+        clerkId: `manual_${email}`,
         email,
         username: null,
         tier: isFirst ? "premium" : "free",
@@ -137,7 +162,7 @@ router.post("/admin/users/import", checkAdminPassword, async (req, res): Promise
     }
   }
 
-  res.json({ ok: true, created, skipped });
+  res.json({ ok: true, created, skipped, notInClerk });
 });
 
 router.post("/admin/sync-from-clerk", checkAdminPassword, async (_req, res): Promise<void> => {

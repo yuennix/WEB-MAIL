@@ -10,6 +10,7 @@ import { InboxPage } from "@/pages/inbox";
 import { DomainsPage } from "@/pages/domains";
 import { EmailDetailPage } from "@/pages/email-detail";
 import { AdminPage } from "@/pages/admin";
+import { ProfilePage } from "@/pages/profile";
 import { SignInPage } from "@/pages/sign-in";
 import { SignUpPage } from "@/pages/sign-up";
 import NotFound from "@/pages/not-found";
@@ -56,6 +57,7 @@ function Router() {
         <Route path="/domains" component={DomainsPage} />
         <Route path="/email/:id" component={EmailDetailPage} />
         <Route path="/admin" component={AdminPage} />
+        <Route path="/profile" component={ProfilePage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route component={NotFound} />
