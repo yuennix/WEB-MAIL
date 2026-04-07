@@ -23,6 +23,7 @@ export function InboxPage() {
   const [liveConnected, setLiveConnected] = useState(false);
   const [domainOpen, setDomainOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [directInput, setDirectInput] = useState("");
   const esRef = useRef<EventSource | null>(null);
   const domainRef = useRef<HTMLDivElement>(null);
 
@@ -157,6 +158,22 @@ export function InboxPage() {
     localStorage.setItem("webmail-address", addr);
   };
 
+  const openDirectInbox = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = directInput.trim().toLowerCase();
+    if (!val.includes("@")) {
+      toast({ title: "Enter a full email address", description: "e.g. hello@weyn.store" });
+      return;
+    }
+    const [a, d] = val.split("@");
+    setAlias(a);
+    setSelectedDomain(d);
+    setActiveAddress(val);
+    setSearch("");
+    localStorage.setItem("webmail-address", val);
+    setDirectInput("");
+  };
+
   const handleCopy = () => {
     if (!activeAddress) return;
     navigator.clipboard.writeText(activeAddress);
@@ -251,6 +268,24 @@ export function InboxPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-8 bg-background">
         <div className="max-w-3xl mx-auto space-y-6">
+
+          {/* Access any inbox */}
+          <div className="rounded-xl border border-border bg-card shadow-sm p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Access any inbox</p>
+            <form onSubmit={openDirectInbox} className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="anything@weyn.store"
+                value={directInput}
+                onChange={(e) => setDirectInput(e.target.value)}
+                className="flex-1 font-mono text-sm h-10"
+              />
+              <Button type="submit" size="icon" className="h-10 w-10 shrink-0 bg-violet-600 hover:bg-violet-700 text-white border-transparent">
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </form>
+          </div>
+
           {/* Header row */}
           <div className="flex items-center justify-between">
             <div>
