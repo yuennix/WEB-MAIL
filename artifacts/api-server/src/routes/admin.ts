@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, domainsTable } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
 import { createClerkClient } from "@clerk/backend";
 
@@ -211,6 +211,41 @@ router.post("/admin/sync-from-clerk", checkAdminPassword, async (_req, res): Pro
   }
 
   res.json({ ok: true, total: allClerkUsers.length, created, skipped });
+});
+
+router.post("/admin/domains/import-from-temp-mail", checkAdminPassword, async (_req, res): Promise<void> => {
+  try {
+    const response = await fetch("https://api.internal.temp-mail.io/api/v3/domains", {
+      headers: { "Accept": "application/json" },
+    });
+    if (!response.ok) {
+      res.status(502).json({ error: "Failed to fetch domains from temp-mail.io" });
+      return;
+    }
+    const json = await response.json() as { domains?: { name: string }[] };
+    const remoteDomains: { name: string }[] = json.domains ?? [];
+
+    let added = 0;
+    let skipped = 0;
+    const addedNames: string[] = [];
+
+    for (const { name } of remoteDomains) {
+      const domain = name.toLowerCase().trim();
+      if (!domain) continue;
+      const existing = await db.select({ id: domainsTable.id }).from(domainsTable).where(eq(domainsTable.name, domain));
+      if (existing.length > 0) {
+        skipped++;
+        continue;
+      }
+      await db.insert(domainsTable).values({ name: domain, active: true });
+      addedNames.push(domain);
+      added++;
+    }
+
+    res.json({ ok: true, added, skipped, domains: addedNames });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Unknown error" });
+  }
 });
 
 router.delete("/admin/users/:id", checkAdminPassword, async (req, res): Promise<void> => {

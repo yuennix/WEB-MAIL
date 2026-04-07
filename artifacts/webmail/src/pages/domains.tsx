@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import {
   Globe, Plus, Trash2, ShieldCheck, Copy, Check, FlaskConical,
-  ChevronDown, ChevronUp, ExternalLink, AlertCircle, Webhook, Server, Dna
+  ChevronDown, ChevronUp, ExternalLink, AlertCircle, Webhook, Server, Dna, Download, RefreshCw
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -186,10 +186,14 @@ function SetupGuide({ domain }: { domain: string }) {
   );
 }
 
+const ADMIN_SESSION_KEY = "maildrop-admin-auth";
+const getAdminPassword = () => sessionStorage.getItem(ADMIN_SESSION_KEY) ?? "";
+
 export function DomainsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [sendingTest, setSendingTest] = useState<number | null>(null);
+  const [importingTempMail, setImportingTempMail] = useState(false);
 
   const sendTestEmail = async (domainId: number, domain: string) => {
     setSendingTest(domainId);
@@ -214,6 +218,35 @@ export function DomainsPage() {
       toast({ title: "Failed to send test email", variant: "destructive" });
     } finally {
       setSendingTest(null);
+    }
+  };
+
+  const importFromTempMail = async () => {
+    const pwd = getAdminPassword();
+    if (!pwd) {
+      toast({ title: "Not authenticated", description: "Please log in to the admin panel first.", variant: "destructive" });
+      return;
+    }
+    setImportingTempMail(true);
+    try {
+      const res = await fetch(`${apiBase}/api/admin/domains/import-from-temp-mail`, {
+        method: "POST",
+        headers: { "x-admin-password": pwd },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const msg = data.added > 0
+          ? `Added ${data.added} domain${data.added !== 1 ? "s" : ""}${data.skipped > 0 ? `, ${data.skipped} already existed` : ""}.`
+          : `All ${data.skipped} domains already existed — nothing new to add.`;
+        toast({ title: "temp-mail.io import done", description: msg });
+        queryClient.invalidateQueries({ queryKey: ["/api/domains"] });
+      } else {
+        toast({ title: "Import failed", description: data.error ?? "Unknown error", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Import failed", description: "Could not reach server", variant: "destructive" });
+    } finally {
+      setImportingTempMail(false);
     }
   };
 
@@ -278,7 +311,23 @@ export function DomainsPage() {
 
       {/* Add domain */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider text-muted-foreground">Add Domain</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider text-muted-foreground">Add Domain</h2>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-2 text-xs border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/40"
+            onClick={importFromTempMail}
+            disabled={importingTempMail}
+          >
+            {importingTempMail
+              ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              : <Download className="w-3.5 h-3.5" />
+            }
+            {importingTempMail ? "Importing…" : "Import from temp-mail.io"}
+          </Button>
+        </div>
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3">
