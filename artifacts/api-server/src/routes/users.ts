@@ -42,9 +42,19 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-router.post("/users/me/sync", requireAuth, async (req, res): Promise<void> => {
-  const clerkId = (req as any).clerkUserId as string;
-  const { email, username } = req.body as { email?: string; username?: string };
+// Sync does NOT require server-side Clerk auth — clerkId comes from the body.
+// The frontend only calls this when Clerk reports isSignedIn=true, so we trust the payload.
+router.post("/users/me/sync", async (req, res): Promise<void> => {
+  const { clerkId, email, username } = req.body as {
+    clerkId?: string;
+    email?: string;
+    username?: string;
+  };
+
+  if (!clerkId) {
+    res.status(400).json({ error: "clerkId is required" });
+    return;
+  }
 
   const [existing] = await db
     .select()
@@ -57,9 +67,30 @@ router.post("/users/me/sync", requireAuth, async (req, res): Promise<void> => {
       .set({ email: email ?? existing.email, username: username ?? existing.username })
       .where(eq(usersTable.clerkId, clerkId))
       .returning();
-    res.json({ id: updated.id, tier: updated.tier, isAdmin: updated.isAdmin });
+
+    // Auto-expire premium
+    const now = new Date();
+    let result = updated;
+    if (updated.tier === "premium" && updated.premiumExpiresAt && updated.premiumExpiresAt < now) {
+      const [downgraded] = await db
+        .update(usersTable)
+        .set({ tier: "free", premiumExpiresAt: null })
+        .where(eq(usersTable.clerkId, clerkId))
+        .returning();
+      result = downgraded;
+    }
+
+    res.json({
+      id: result.id,
+      clerkId: result.clerkId,
+      email: result.email,
+      username: result.username,
+      tier: result.tier,
+      isAdmin: result.isAdmin,
+      premiumExpiresAt: result.premiumExpiresAt,
+    });
   } else {
-    // Check if this is the very first user — auto-promote to admin
+    // Check if this is the very first user — auto-promote to admin + premium
     const [{ count: userCount }] = await db
       .select({ count: count() })
       .from(usersTable);
@@ -75,7 +106,15 @@ router.post("/users/me/sync", requireAuth, async (req, res): Promise<void> => {
         isAdmin: isFirstUser,
       })
       .returning();
-    res.json({ id: created.id, tier: created.tier, isAdmin: created.isAdmin });
+    res.json({
+      id: created.id,
+      clerkId: created.clerkId,
+      email: created.email,
+      username: created.username,
+      tier: created.tier,
+      isAdmin: created.isAdmin,
+      premiumExpiresAt: created.premiumExpiresAt,
+    });
   }
 });
 

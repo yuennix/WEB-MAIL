@@ -28,17 +28,15 @@ export function useUserTier() {
       return;
     }
 
+    const clerkId = user?.id ?? "";
     const email = user?.primaryEmailAddress?.emailAddress ?? "";
     const username = user?.username ?? user?.firstName ?? null;
 
     fetch(`${apiBase}/api/users/me/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email, username }),
+      body: JSON.stringify({ clerkId, email, username }),
     })
-      .then((r) => r.json())
-      .then(() => fetch(`${apiBase}/api/users/me`, { credentials: "include" }))
       .then((r) => r.json())
       .then((data) => {
         setProfile(data as UserProfile);

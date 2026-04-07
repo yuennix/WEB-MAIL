@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff } from "lucide-react";
+import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2 } from "lucide-react";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
 const SESSION_KEY = "maildrop-admin-auth";
@@ -129,6 +129,28 @@ export function AdminPage() {
           total: prev.total,
           premium: nowPremium ? prev.premium + 1 : prev.premium - 1,
           free: nowPremium ? prev.free - 1 : prev.free + 1,
+        };
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    if (!confirm("Delete this user? This cannot be undone.")) return;
+    setUpdating(userId);
+    try {
+      await fetch(`${apiBase}/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: { "x-admin-password": storedPassword() },
+      });
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setStats((prev) => {
+        const wasP = users.find((u) => u.id === userId)?.tier === "premium";
+        return {
+          total: prev.total - 1,
+          premium: wasP ? prev.premium - 1 : prev.premium,
+          free: wasP ? prev.free : prev.free - 1,
         };
       });
     } finally {
@@ -338,6 +360,17 @@ export function AdminPage() {
                     {updating === u.id ? "Downgrading…" : "Downgrade"}
                   </Button>
                 )}
+
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => deleteUser(u.id)}
+                  disabled={updating === u.id}
+                  title="Delete user"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
               </div>
             ))}
           </div>

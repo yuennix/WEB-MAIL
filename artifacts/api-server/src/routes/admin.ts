@@ -98,4 +98,17 @@ router.patch("/admin/users/:id/tier", checkAdminPassword, async (req, res): Prom
   res.json({ id: updated.id, tier: updated.tier, premiumExpiresAt: updated.premiumExpiresAt });
 });
 
+router.delete("/admin/users/:id", checkAdminPassword, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  const [deleted] = await db
+    .delete(usersTable)
+    .where(eq(usersTable.id, id))
+    .returning();
+  if (!deleted) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 export default router;
