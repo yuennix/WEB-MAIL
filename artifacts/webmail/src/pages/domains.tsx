@@ -16,7 +16,8 @@ const domainSchema = z.object({
   name: z.string().min(3, "Domain name is too short").regex(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Must be a valid domain name"),
 });
 
-const webhookUrl = `${window.location.origin}/api/webhook/email`;
+const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+const webhookUrl = `${apiBase}/api/webhook/email`;
 
 export function DomainsPage() {
   const { toast } = useToast();
