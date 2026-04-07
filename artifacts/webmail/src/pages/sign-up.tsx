@@ -112,7 +112,7 @@ export function SignUpPage() {
       </div>
 
       <p className="text-white/20 text-[10px] mt-6 relative z-10">
-        © {new Date().getFullYear()} WEYN EMAILS · weyn.store · jhames.shop
+        © {new Date().getFullYear()} WEYN EMAILS
       </p>
     </div>
   );
