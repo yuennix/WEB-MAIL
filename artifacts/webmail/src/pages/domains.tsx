@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Globe, Plus, Trash2, ShieldCheck, Copy, Check, Info } from "lucide-react";
+import { Globe, Plus, Trash2, ShieldCheck, Copy, Check, Info, FlaskConical } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,6 +23,34 @@ export function DomainsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [sendingTest, setSendingTest] = useState(false);
+
+  const sendTestEmail = async (domain: string) => {
+    setSendingTest(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+      const res = await fetch(`${apiBase}/api/test/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: `test@${domain}`,
+          from: "sender@example.com",
+          subject: "Test Email - Your inbox is working!",
+          body: "<p>Hello! This is a <strong>test email</strong>. If you can see this, your inbox is set up correctly.</p>",
+        }),
+      });
+      if (res.ok) {
+        toast({ title: "Test email sent!", description: `Check your inbox for test@${domain}` });
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      } else {
+        toast({ title: "Failed to send test email", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Failed to send test email", variant: "destructive" });
+    } finally {
+      setSendingTest(false);
+    }
+  };
 
   const { data: domainsData, isLoading: isLoadingDomains } = useListDomains();
   const addDomain = useAddDomain();
@@ -141,17 +169,28 @@ export function DomainsPage() {
                           Added {format(new Date(domain.createdAt), "MMM d, yyyy")}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive sm:self-auto self-end"
-                        onClick={() => handleDelete(domain.id, domain.name)}
-                        disabled={deleteDomain.isPending}
-                        data-testid={`delete-domain-${domain.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remove
-                      </Button>
+                      <div className="flex gap-2 sm:self-auto self-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => sendTestEmail(domain.name)}
+                          disabled={sendingTest}
+                        >
+                          <FlaskConical className="w-4 h-4 mr-2" />
+                          {sendingTest ? "Sending..." : "Send Test"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(domain.id, domain.name)}
+                          disabled={deleteDomain.isPending}
+                          data-testid={`delete-domain-${domain.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
