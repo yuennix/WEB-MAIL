@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Mail, Check, Zap, ZapOff } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Mail, Check, Zap, ZapOff, Radio } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 const AUTO_REFRESH_INTERVAL = 15000;
+const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
 
 export function InboxPage() {
   const [, setLocation] = useLocation();
@@ -18,6 +19,8 @@ export function InboxPage() {
   const [activeAddress, setActiveAddress] = useState("");
   const [copied, setCopied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("webmail-address");
@@ -63,6 +66,41 @@ export function InboxPage() {
     const interval = setInterval(doRefetch, AUTO_REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [autoRefresh, activeAddress, doRefetch]);
+
+  // SSE real-time connection
+  useEffect(() => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
+      setLiveConnected(false);
+    }
+    if (!activeAddress) return;
+
+    const url = `${apiBase}/api/events?address=${encodeURIComponent(activeAddress)}`;
+    const es = new EventSource(url);
+    esRef.current = es;
+
+    es.addEventListener("connected", () => setLiveConnected(true));
+
+    es.addEventListener("new-email", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as { to: string; id: number };
+        if (data.to.toLowerCase() === activeAddress.toLowerCase()) {
+          refetchEmails();
+        }
+      } catch {
+        refetchEmails();
+      }
+    });
+
+    es.onerror = () => setLiveConnected(false);
+
+    return () => {
+      es.close();
+      esRef.current = null;
+      setLiveConnected(false);
+    };
+  }, [activeAddress, refetchEmails]);
 
   const handleGetEmail = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -171,6 +209,12 @@ export function InboxPage() {
 
             {activeAddress && (
               <div className="flex items-center gap-2">
+                {liveConnected && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    <Radio className="w-3 h-3 animate-pulse" />
+                    Live
+                  </span>
+                )}
                 <Button
                   variant={autoRefresh ? "default" : "outline"}
                   size="sm"

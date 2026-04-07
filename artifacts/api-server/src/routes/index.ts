@@ -4,6 +4,7 @@ import domainsRouter from "./domains";
 import emailsRouter from "./emails";
 import webhookRouter from "./webhook";
 import testRouter from "./test";
+import eventsRouter from "./events";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(domainsRouter);
 router.use(emailsRouter);
 router.use(webhookRouter);
 router.use(testRouter);
+router.use(eventsRouter);
 
 export default router;

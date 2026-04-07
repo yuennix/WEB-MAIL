@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, emailsTable, domainsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { broadcastNewEmail } from "../lib/sse";
 
 const router: IRouter = Router();
 
@@ -42,6 +43,7 @@ router.post("/test/send-email", async (req, res): Promise<void> => {
       sizeBytes: Buffer.byteLength(emailBody, "utf8"),
     }).returning();
 
+    broadcastNewEmail(toAddress, inserted.id);
     res.status(200).json({ status: "ok", emailId: inserted.id, to: toAddress });
   } catch (err) {
     res.status(500).json({ error: "Failed to send test email" });

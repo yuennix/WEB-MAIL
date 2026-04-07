@@ -3,6 +3,7 @@ import multer from "multer";
 import { db, emailsTable, domainsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { broadcastNewEmail } from "../lib/sse";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -129,6 +130,8 @@ router.post(
         { emailId: inserted.id, to: toAddress, from: fromAddress, subject },
         "Email received and stored"
       );
+
+      broadcastNewEmail(toAddress, inserted.id);
 
       res.status(200).json({ status: "ok", emailId: inserted.id });
     } catch (err) {
