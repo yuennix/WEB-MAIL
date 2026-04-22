@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Lock, Crown, Trash2, Trash } from "lucide-react";
+import { Copy, RefreshCw, Inbox, Shuffle, Check, Zap, ZapOff, Radio, ChevronDown, ArrowRight, Search, X, Crown, Trash2, Trash } from "lucide-react";
 import { useListEmails, useListDomains, useGetEmailStats } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,12 +55,7 @@ export function InboxPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      setLocation("/sign-in");
-    }
-  }, [isLoaded, isSignedIn, setLocation]);
+  // No redirect — unauthenticated users get free-tier (Facebook 8-digit codes only)
 
   const {
     data: emailsData,
@@ -236,19 +231,6 @@ export function InboxPage() {
       })
     : tierFiltered;
 
-  // Auth gate — must be after all hooks
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-[100dvh]">
-        <div className="w-8 h-8 rounded-full border-4 border-violet-600 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
-  if (isLoaded && !isSignedIn) {
-    return null;
-  }
-
   return (
     <div className="h-full flex flex-col min-h-[100dvh]">
       {/* Top bar */}
@@ -345,9 +327,17 @@ export function InboxPage() {
           {tier === "free" && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5">
               <Crown className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                <span className="font-semibold">Free plan</span> — Facebook 8-digit security codes. Unlock premium to access all emails.
+              <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+                <span className="font-semibold">Free plan</span> — Facebook 8-digit security codes only.
               </p>
+              {!isSignedIn && (
+                <button
+                  onClick={() => setLocation("/sign-in")}
+                  className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline shrink-0 whitespace-nowrap"
+                >
+                  Sign in for Premium →
+                </button>
+              )}
             </div>
           )}
 
