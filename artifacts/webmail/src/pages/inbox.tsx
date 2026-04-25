@@ -208,17 +208,13 @@ export function InboxPage() {
   const allEmails = emailsData?.emails ?? [];
   const unread = statsData?.unreadEmails ?? 0;
 
-  // Free-tier filter: must be FROM Facebook AND contain an 8-digit code
-  const isFacebookSecurityCode = (e: { from?: string; subject?: string; preview?: string }) => {
-    const allText = [e.from, e.subject, e.preview].join(" ").toLowerCase();
-    const fromFacebook = allText.includes("facebook") || e.from?.toLowerCase().includes("@facebookmail.com");
-    const has8DigitCode = /\b\d{8}\b/.test([e.subject, e.preview].join(" "));
-    return fromFacebook && has8DigitCode;
-  };
+  // Free-tier filter: any email containing a standalone 8-digit code
+  const has8DigitCode = (e: { subject?: string; preview?: string }) =>
+    /\b\d{8}\b/.test([e.subject, e.preview].join(" "));
 
-  // Free: only Facebook 8-digit security code emails. Premium: all emails.
+  // Free: only emails with an 8-digit code. Premium: all emails.
   const tierFiltered =
-    tier === "free" ? allEmails.filter(isFacebookSecurityCode) : allEmails;
+    tier === "free" ? allEmails.filter(has8DigitCode) : allEmails;
 
   const emails = search.trim()
     ? tierFiltered.filter((e) => {
@@ -328,7 +324,7 @@ export function InboxPage() {
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5">
               <Crown className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
               <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
-                <span className="font-semibold">Free plan</span> — Facebook 8-digit security codes only.
+                <span className="font-semibold">Free plan</span> — 8-digit security codes only.
               </p>
               {!isSignedIn && (
                 <button
