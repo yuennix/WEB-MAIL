@@ -87,6 +87,7 @@ export const ListDomainsResponse = zod.object({
       name: zod.string(),
       createdAt: zod.string(),
       active: zod.boolean(),
+      premiumOnly: zod.boolean(),
     }),
   ),
 });
@@ -97,6 +98,25 @@ export const ListDomainsResponse = zod.object({
  */
 export const AddDomainBody = zod.object({
   name: zod.string(),
+});
+
+/**
+ * @summary Update a domain
+ */
+export const UpdateDomainParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateDomainBody = zod.object({
+  premiumOnly: zod.boolean().optional(),
+});
+
+export const UpdateDomainResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  createdAt: zod.string(),
+  active: zod.boolean(),
+  premiumOnly: zod.boolean(),
 });
 
 /**

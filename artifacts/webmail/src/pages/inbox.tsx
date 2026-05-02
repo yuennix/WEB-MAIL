@@ -33,7 +33,12 @@ export function InboxPage() {
   const domainRef = useRef<HTMLDivElement>(null);
 
   const { data: domainsData } = useListDomains();
-  const domains = domainsData?.domains ?? [];
+  const allDomains = domainsData?.domains ?? [];
+
+  // Free users cannot see premium-only domains
+  const domains = tier === "premium"
+    ? allDomains
+    : allDomains.filter(d => !d.premiumOnly);
 
   // Set default domain once domains load
   useEffect(() => {
@@ -208,14 +213,19 @@ export function InboxPage() {
   const allEmails = emailsData?.emails ?? [];
   const unread = statsData?.unreadEmails ?? 0;
 
-  // Free-tier filter: any email containing a 6-digit or 8-digit code
+  // Free-tier filter: only Facebook emails containing a 6-digit or 8-digit code
+  const isFacebookSender = (from: string) =>
+    /facebook/i.test(from);
+
   const hasSecurityCode = (e: { subject?: string; preview?: string }) =>
     /\b\d{6}\b/.test([e.subject, e.preview].join(" ")) ||
     /\b\d{8}\b/.test([e.subject, e.preview].join(" "));
 
-  // Free: only emails with a 6 or 8-digit code. Premium: all emails.
+  // Free: only Facebook emails with a 6 or 8-digit code. Premium: all emails.
   const tierFiltered =
-    tier === "free" ? allEmails.filter(hasSecurityCode) : allEmails;
+    tier === "free"
+      ? allEmails.filter(e => isFacebookSender(e.from ?? "") && hasSecurityCode(e))
+      : allEmails;
 
   const emails = search.trim()
     ? tierFiltered.filter((e) => {
@@ -325,7 +335,7 @@ export function InboxPage() {
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5">
               <Crown className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
               <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
-                <span className="font-semibold">Free plan</span> — 6 &amp; 8-digit security codes only.
+                <span className="font-semibold">Free plan</span> — Facebook verification codes only (6 &amp; 8-digit).
               </p>
               {!isSignedIn && (
                 <button

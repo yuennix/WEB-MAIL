@@ -132,6 +132,35 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /domains/{id}:
+    patch:
+      operationId: updateDomain
+      tags: [domains]
+      summary: Update a domain
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDomainBody"
+      responses:
+        "200":
+          description: Domain updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Domain"
+        "404":
+          description: Domain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       operationId: deleteDomain
       tags: [domains]
@@ -277,11 +306,20 @@ components:
           type: string
         active:
           type: boolean
+        premiumOnly:
+          type: boolean
       required:
         - id
         - name
         - createdAt
         - active
+        - premiumOnly
+
+    UpdateDomainBody:
+      type: object
+      properties:
+        premiumOnly:
+          type: boolean
 
     DomainList:
       type: object

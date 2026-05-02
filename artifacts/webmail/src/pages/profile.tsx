@@ -136,7 +136,7 @@ export function ProfilePage() {
           <p className="text-xs text-muted-foreground mt-0.5">
             {tier === "premium"
               ? "Full inbox access — all emails visible"
-              : "Only emails with 6 or 8-digit security codes are shown"}
+              : "Facebook verification codes only (6 & 8-digit)"}
           </p>
 
           {/* Live countdown for premium */}

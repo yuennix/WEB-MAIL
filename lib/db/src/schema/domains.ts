@@ -6,6 +6,7 @@ export const domainsTable = pgTable("domains", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   active: boolean("active").notNull().default(true),
+  premiumOnly: boolean("premium_only").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

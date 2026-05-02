@@ -19,3 +19,4 @@ export * from "./getEmailParams";
 export * from "./getEmailStatsParams";
 export * from "./healthStatus";
 export * from "./listEmailsParams";
+export * from "./updateDomainBody";

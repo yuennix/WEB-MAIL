@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, domainsTable } from "@workspace/db";
-import { AddDomainBody, DeleteDomainParams } from "@workspace/api-zod";
+import { AddDomainBody, DeleteDomainParams, UpdateDomainBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -11,6 +11,7 @@ router.get("/domains", async (req, res): Promise<void> => {
     id: d.id,
     name: d.name,
     active: d.active,
+    premiumOnly: d.premiumOnly,
     createdAt: d.createdAt.toISOString(),
   })) });
 });
@@ -39,6 +40,39 @@ router.post("/domains", async (req, res): Promise<void> => {
     id: domain.id,
     name: domain.name,
     active: domain.active,
+    createdAt: domain.createdAt.toISOString(),
+  });
+});
+
+router.patch("/domains/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid domain id" });
+    return;
+  }
+
+  const parsed = UpdateDomainBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [domain] = await db
+    .update(domainsTable)
+    .set({ premiumOnly: parsed.data.premiumOnly })
+    .where(eq(domainsTable.id, id))
+    .returning();
+
+  if (!domain) {
+    res.status(404).json({ error: "Domain not found" });
+    return;
+  }
+
+  res.json({
+    id: domain.id,
+    name: domain.name,
+    active: domain.active,
+    premiumOnly: domain.premiumOnly,
     createdAt: domain.createdAt.toISOString(),
   });
 });

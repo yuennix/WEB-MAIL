@@ -2,12 +2,13 @@ import { useState } from "react";
 import { format } from "date-fns";
 import {
   Globe, Plus, Trash2, ShieldCheck, Copy, Check, FlaskConical,
-  ChevronDown, ChevronUp, ExternalLink, AlertCircle, Webhook, Server, Dna, Download, RefreshCw
+  ChevronDown, ChevronUp, ExternalLink, AlertCircle, Webhook, Server, Dna, Download, RefreshCw,
+  Lock, Unlock
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useListDomains, useAddDomain, useDeleteDomain } from "@workspace/api-client-react";
+import { useListDomains, useAddDomain, useDeleteDomain, useUpdateDomain } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -253,6 +254,30 @@ export function DomainsPage() {
   const { data: domainsData, isLoading: isLoadingDomains } = useListDomains();
   const addDomain = useAddDomain();
   const deleteDomain = useDeleteDomain();
+  const updateDomain = useUpdateDomain();
+  const [togglingLock, setTogglingLock] = useState<number | null>(null);
+
+  const handleToggleLock = async (id: number, name: string, currentlyLocked: boolean) => {
+    setTogglingLock(id);
+    updateDomain.mutate(
+      { id, data: { premiumOnly: !currentlyLocked } },
+      {
+        onSuccess: () => {
+          toast({
+            title: currentlyLocked ? `${name} unlocked` : `${name} locked to Premium`,
+            description: currentlyLocked
+              ? "Free users can now use this domain."
+              : "Only premium users can use this domain.",
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/domains"] });
+        },
+        onError: () => {
+          toast({ title: "Failed to update domain", variant: "destructive" });
+        },
+        onSettled: () => setTogglingLock(null),
+      }
+    );
+  };
 
   const form = useForm<z.infer<typeof domainSchema>>({
     resolver: zodResolver(domainSchema),
@@ -423,7 +448,28 @@ export function DomainsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`h-9 text-xs gap-1.5 ${
+                        domain.premiumOnly
+                          ? "border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/60"
+                          : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      }`}
+                      onClick={() => handleToggleLock(domain.id, domain.name, domain.premiumOnly)}
+                      disabled={togglingLock === domain.id}
+                      title={domain.premiumOnly ? "Click to unlock — free users will be able to use this domain" : "Click to lock — only premium users will see this domain"}
+                    >
+                      {togglingLock === domain.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : domain.premiumOnly ? (
+                        <Lock className="w-3.5 h-3.5" />
+                      ) : (
+                        <Unlock className="w-3.5 h-3.5" />
+                      )}
+                      {domain.premiumOnly ? "Premium Only" : "Free Access"}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

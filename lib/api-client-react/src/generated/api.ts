@@ -28,6 +28,7 @@ import type {
   GetEmailStatsParams,
   HealthStatus,
   ListEmailsParams,
+  UpdateDomainBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -472,6 +473,93 @@ export const useAddDomain = <
   TContext
 > => {
   return useMutation(getAddDomainMutationOptions(options));
+};
+
+/**
+ * @summary Update a domain
+ */
+export const getUpdateDomainUrl = (id: number) => {
+  return `/api/domains/${id}`;
+};
+
+export const updateDomain = async (
+  id: number,
+  updateDomainBody: UpdateDomainBody,
+  options?: RequestInit,
+): Promise<Domain> => {
+  return customFetch<Domain>(getUpdateDomainUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateDomainBody),
+  });
+};
+
+export const getUpdateDomainMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDomain>>,
+    TError,
+    { id: number; data: BodyType<UpdateDomainBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDomain>>,
+  TError,
+  { id: number; data: BodyType<UpdateDomainBody> },
+  TContext
+> => {
+  const mutationKey = ["updateDomain"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDomain>>,
+    { id: number; data: BodyType<UpdateDomainBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateDomain(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDomainMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDomain>>
+>;
+export type UpdateDomainMutationBody = BodyType<UpdateDomainBody>;
+export type UpdateDomainMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a domain
+ */
+export const useUpdateDomain = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDomain>>,
+    TError,
+    { id: number; data: BodyType<UpdateDomainBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateDomain>>,
+  TError,
+  { id: number; data: BodyType<UpdateDomainBody> },
+  TContext
+> => {
+  return useMutation(getUpdateDomainMutationOptions(options));
 };
 
 /**

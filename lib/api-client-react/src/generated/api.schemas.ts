@@ -48,6 +48,11 @@ export interface Domain {
   name: string;
   createdAt: string;
   active: boolean;
+  premiumOnly: boolean;
+}
+
+export interface UpdateDomainBody {
+  premiumOnly?: boolean;
 }
 
 export interface DomainList {

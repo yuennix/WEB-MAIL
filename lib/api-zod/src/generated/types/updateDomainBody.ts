@@ -6,10 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Domain {
-  id: number;
-  name: string;
-  createdAt: string;
-  active: boolean;
-  premiumOnly: boolean;
+export interface UpdateDomainBody {
+  premiumOnly?: boolean;
 }
