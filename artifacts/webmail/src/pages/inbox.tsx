@@ -322,7 +322,7 @@ export function InboxPage() {
           <div className="max-w-lg mx-auto">
             <div className="bg-white dark:bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
 
-              {/* Active address display */}
+              {/* Live address preview / active address */}
               <button
                 onClick={activeAddress ? handleCopy : undefined}
                 disabled={!activeAddress}
@@ -330,17 +330,27 @@ export function InboxPage() {
                   activeAddress ? "hover:bg-muted/40 cursor-pointer" : "cursor-default"
                 }`}
               >
-                <p className={`font-mono font-bold text-base break-all leading-snug ${
-                  activeAddress ? "text-foreground" : "text-muted-foreground/50"
+                <p className={`font-mono font-bold text-base break-all leading-snug transition-colors ${
+                  activeAddress
+                    ? "text-foreground"
+                    : alias
+                      ? "text-foreground/70"
+                      : "text-muted-foreground/40"
                 }`}>
-                  {activeAddress || `your-alias@${activeDomain}`}
+                  {activeAddress
+                    ? activeAddress
+                    : alias
+                      ? `${alias}@${activeDomain}`
+                      : `username@${activeDomain}`}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1 flex items-center justify-center gap-1">
                   {activeAddress
                     ? copied
                       ? <><Check className="w-3 h-3 text-emerald-500" /><span className="text-emerald-600 dark:text-emerald-400 font-medium">Copied to clipboard</span></>
                       : <><Copy className="w-3 h-3" />Tap to copy</>
-                    : "Enter a username below"}
+                    : alias
+                      ? "Tap Open Inbox to access this address"
+                      : "Type a username below to get started"}
                 </p>
               </button>
 
@@ -348,9 +358,35 @@ export function InboxPage() {
               <div className="px-4 py-4 space-y-3">
                 <Input
                   type="text"
-                  placeholder="Username…"
+                  placeholder="e.g. arvinm1993"
                   value={alias}
-                  onChange={(e) => setAlias(e.target.value.toLowerCase().replace(/[^a-z0-9._+-]/g, ""))}
+                  onChange={(e) => {
+                    const val = e.target.value.toLowerCase();
+                    if (val.includes("@")) {
+                      const atIdx = val.indexOf("@");
+                      const a = val.slice(0, atIdx).replace(/[^a-z0-9._+-]/g, "");
+                      const d = val.slice(atIdx + 1);
+                      setAlias(a);
+                      const matched = domains.find(dom => dom.name === d);
+                      if (matched) setSelectedDomain(matched.name);
+                    } else {
+                      setAlias(val.replace(/[^a-z0-9._+-]/g, ""));
+                    }
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pasted = e.clipboardData.getData("text").trim().toLowerCase();
+                    if (pasted.includes("@")) {
+                      const atIdx = pasted.indexOf("@");
+                      const a = pasted.slice(0, atIdx).replace(/[^a-z0-9._+-]/g, "");
+                      const d = pasted.slice(atIdx + 1);
+                      setAlias(a);
+                      const matched = domains.find(dom => dom.name === d);
+                      if (matched) setSelectedDomain(matched.name);
+                    } else {
+                      setAlias(pasted.replace(/[^a-z0-9._+-]/g, ""));
+                    }
+                  }}
                   className="h-11 text-sm font-mono bg-muted/40 border-border focus-visible:ring-violet-500"
                   onKeyDown={(e) => e.key === "Enter" && openInbox()}
                 />
