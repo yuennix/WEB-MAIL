@@ -138,6 +138,7 @@ export function AdminPage() {
         sessionStorage.setItem(SESSION_KEY, password);
         setAuthenticated(true);
         fetchUsers(password);
+        fetchAllDomains();
       } else {
         setAuthError("Wrong password. Try again.");
       }
