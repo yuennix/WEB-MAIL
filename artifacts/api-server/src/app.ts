@@ -38,14 +38,4 @@ app.use(clerkMiddleware());
 
 app.use("/api", router);
 
-// Redirect root hits to the frontend (in case DNS points here directly)
-const frontendUrl = process.env["FRONTEND_URL"];
-app.get("/", (_req, res) => {
-  if (frontendUrl) {
-    res.redirect(301, frontendUrl);
-  } else {
-    res.status(200).send("API server is running. Frontend is hosted separately.");
-  }
-});
-
 export default app;
