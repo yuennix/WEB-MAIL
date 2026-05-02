@@ -16,7 +16,7 @@ const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
 export function InboxPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { tier } = useUserTier();
+  const { tier, allowedDomainIds } = useUserTier();
   const { isSignedIn, isLoaded } = useUser();
 
   const [alias, setAlias] = useState("");
@@ -35,10 +35,15 @@ export function InboxPage() {
   const { data: domainsData } = useListDomains();
   const allDomains = domainsData?.domains ?? [];
 
-  // Free users cannot see premium-only domains
-  const domains = tier === "premium"
-    ? allDomains
-    : allDomains.filter(d => !d.premiumOnly);
+  // Domain visibility rules:
+  // - Free users: only non-premiumOnly domains
+  // - Premium users with assigned domains: only their assigned domains
+  // - Premium users with no assignments: all domains
+  const domains = tier === "free"
+    ? allDomains.filter(d => !d.premiumOnly)
+    : allowedDomainIds.length > 0
+      ? allDomains.filter(d => allowedDomainIds.includes(d.id))
+      : allDomains;
 
   // Set default domain once domains load
   useEffect(() => {

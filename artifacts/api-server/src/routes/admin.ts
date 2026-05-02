@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, domainsTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { db, usersTable, domainsTable, userDomainAssignmentsTable } from "@workspace/db";
+import { eq, count, and } from "drizzle-orm";
 import { createClerkClient } from "@clerk/backend";
 
 const router: IRouter = Router();
@@ -258,6 +258,45 @@ router.delete("/admin/users/:id", checkAdminPassword, async (req, res): Promise<
     res.status(404).json({ error: "User not found" });
     return;
   }
+  res.json({ ok: true });
+});
+
+// ── Per-user domain assignments ─────────────────────────────────────────────
+
+router.get("/admin/users/:id/domains", checkAdminPassword, async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id, 10);
+  const assignments = await db
+    .select({ domainId: userDomainAssignmentsTable.domainId })
+    .from(userDomainAssignmentsTable)
+    .where(eq(userDomainAssignmentsTable.userId, userId));
+  res.json({ domainIds: assignments.map((a) => a.domainId) });
+});
+
+router.post("/admin/users/:id/domains/:domainId", checkAdminPassword, async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id, 10);
+  const domainId = parseInt(req.params.domainId, 10);
+  if (isNaN(userId) || isNaN(domainId)) {
+    res.status(400).json({ error: "Invalid ids" });
+    return;
+  }
+  await db
+    .insert(userDomainAssignmentsTable)
+    .values({ userId, domainId })
+    .onConflictDoNothing();
+  res.json({ ok: true });
+});
+
+router.delete("/admin/users/:id/domains/:domainId", checkAdminPassword, async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id, 10);
+  const domainId = parseInt(req.params.domainId, 10);
+  await db
+    .delete(userDomainAssignmentsTable)
+    .where(
+      and(
+        eq(userDomainAssignmentsTable.userId, userId),
+        eq(userDomainAssignmentsTable.domainId, domainId)
+      )
+    );
   res.json({ ok: true });
 });
 

@@ -1,11 +1,15 @@
 import { Router, type IRouter } from "express";
 import { eq, count, or } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, userDomainAssignmentsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-function buildProfile(user: typeof usersTable.$inferSelect) {
+async function buildProfile(user: typeof usersTable.$inferSelect) {
+  const assignments = await db
+    .select({ domainId: userDomainAssignmentsTable.domainId })
+    .from(userDomainAssignmentsTable)
+    .where(eq(userDomainAssignmentsTable.userId, user.id));
   return {
     id: user.id,
     clerkId: user.clerkId,
@@ -14,6 +18,7 @@ function buildProfile(user: typeof usersTable.$inferSelect) {
     tier: user.tier,
     isAdmin: user.isAdmin,
     premiumExpiresAt: user.premiumExpiresAt,
+    allowedDomainIds: assignments.map((a) => a.domainId),
   };
 }
 
@@ -32,7 +37,6 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
       .returning();
   }
 
-  // Auto-expire premium if past expiry date
   const now = new Date();
   if (user.tier === "premium" && user.premiumExpiresAt && user.premiumExpiresAt < now) {
     const [downgraded] = await db
@@ -43,11 +47,9 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
     user = downgraded;
   }
 
-  res.json(buildProfile(user));
+  res.json(await buildProfile(user));
 });
 
-// Sync does NOT require server-side Clerk auth — clerkId comes from the body.
-// The frontend only calls this when Clerk reports isSignedIn=true, so we trust the payload.
 router.post("/users/me/sync", async (req, res): Promise<void> => {
   const { clerkId, email, username, sessionToken: clientToken } = req.body as {
     clerkId?: string;
@@ -61,7 +63,6 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
     return;
   }
 
-  // Match by clerkId first; fall back to email (catches manually-added users)
   const conditions = [eq(usersTable.clerkId, clerkId)];
   if (email) conditions.push(eq(usersTable.email, email));
   const [existing] = await db
@@ -82,7 +83,6 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
       .where(eq(usersTable.id, existing.id))
       .returning();
 
-    // Auto-expire premium
     let current = updated;
     const now = new Date();
     if (current.tier === "premium" && current.premiumExpiresAt && current.premiumExpiresAt < now) {
@@ -94,13 +94,10 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
       current = downgraded;
     }
 
-    // ── Single-device session enforcement ──────────────────────────────
-    // Admins are exempt so they can manage from any device.
     if (!current.isAdmin) {
       const dbToken = current.sessionToken;
 
       if (!clientToken) {
-        // New device / fresh login — generate a token, invalidate previous device
         const newToken = crypto.randomUUID();
         const [saved] = await db
           .update(usersTable)
@@ -108,23 +105,19 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
           .where(eq(usersTable.clerkId, clerkId))
           .returning();
         result = saved;
-        return res.json({ ...buildProfile(result), sessionToken: newToken, kicked: false });
+        return res.json({ ...(await buildProfile(result)), sessionToken: newToken, kicked: false });
       }
 
       if (clientToken === dbToken) {
-        // Same device — all good
         result = current;
-        return res.json({ ...buildProfile(result), sessionToken: dbToken, kicked: false });
+        return res.json({ ...(await buildProfile(result)), sessionToken: dbToken, kicked: false });
       }
 
-      // Different token — this is a stale device; kick it
-      return res.json({ ...buildProfile(current), sessionToken: null, kicked: true });
+      return res.json({ ...(await buildProfile(current)), sessionToken: null, kicked: true });
     }
-    // ──────────────────────────────────────────────────────────────────
 
     result = current;
   } else {
-    // Check if this is the very first user — auto-promote to admin + premium
     const [{ count: userCount }] = await db
       .select({ count: count() })
       .from(usersTable);
@@ -143,7 +136,6 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
     result = created;
   }
 
-  // Generate session token for new or admin users
   if (!result.sessionToken && !result.isAdmin) {
     const newToken = crypto.randomUUID();
     const [saved] = await db
@@ -152,10 +144,10 @@ router.post("/users/me/sync", async (req, res): Promise<void> => {
       .where(eq(usersTable.clerkId, clerkId))
       .returning();
     result = saved;
-    return res.json({ ...buildProfile(result), sessionToken: newToken, kicked: false });
+    return res.json({ ...(await buildProfile(result)), sessionToken: newToken, kicked: false });
   }
 
-  res.json({ ...buildProfile(result), sessionToken: result.sessionToken ?? null, kicked: false });
+  res.json({ ...(await buildProfile(result)), sessionToken: result.sessionToken ?? null, kicked: false });
 });
 
 export default router;

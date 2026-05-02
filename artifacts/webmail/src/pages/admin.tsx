@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2, UserPlus, ChevronDown, ChevronUp, Globe } from "lucide-react";
+import { Shield, Crown, User, RefreshCw, Users, Star, UserCheck, Lock, Eye, EyeOff, Trash2, UserPlus, ChevronDown, ChevronUp, Globe, Unlock } from "lucide-react";
 import { DomainsPage } from "@/pages/domains";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
@@ -58,6 +58,12 @@ export function AdminPage() {
   const [showImport, setShowImport] = useState(false);
   const [importEmails, setImportEmails] = useState("");
   const [importing, setImporting] = useState(false);
+
+  // Domain assignments per user
+  const [expandedDomains, setExpandedDomains] = useState<Record<number, boolean>>({});
+  const [userDomainIds, setUserDomainIds] = useState<Record<number, number[]>>({});
+  const [allDomains, setAllDomains] = useState<{ id: number; name: string }[]>([]);
+  const [togglingDomain, setTogglingDomain] = useState<string | null>(null);
   const [importMsg, setImportMsg] = useState("");
   const [activeTab, setActiveTab] = useState<"users" | "domains">("users");
 
@@ -68,8 +74,55 @@ export function AdminPage() {
     if (saved) {
       setAuthenticated(true);
       fetchUsers(saved);
+      fetchAllDomains();
     }
   }, []);
+
+  const fetchAllDomains = async () => {
+    try {
+      const res = await fetch(`${apiBase}/api/domains`);
+      const data = await res.json();
+      setAllDomains(data.domains ?? []);
+    } catch { /* ignore */ }
+  };
+
+  const loadUserDomains = async (userId: number) => {
+    try {
+      const res = await fetch(`${apiBase}/api/admin/users/${userId}/domains`, {
+        headers: { "x-admin-password": storedPassword() },
+      });
+      const data = await res.json();
+      setUserDomainIds(prev => ({ ...prev, [userId]: data.domainIds ?? [] }));
+    } catch { /* ignore */ }
+  };
+
+  const toggleUserDomain = async (userId: number, domainId: number, currentlyAssigned: boolean) => {
+    const key = `${userId}-${domainId}`;
+    setTogglingDomain(key);
+    try {
+      const method = currentlyAssigned ? "DELETE" : "POST";
+      await fetch(`${apiBase}/api/admin/users/${userId}/domains/${domainId}`, {
+        method,
+        headers: { "x-admin-password": storedPassword() },
+      });
+      setUserDomainIds(prev => ({
+        ...prev,
+        [userId]: currentlyAssigned
+          ? (prev[userId] ?? []).filter(id => id !== domainId)
+          : [...(prev[userId] ?? []), domainId],
+      }));
+    } finally {
+      setTogglingDomain(null);
+    }
+  };
+
+  const toggleDomainPanel = (userId: number) => {
+    const isOpen = expandedDomains[userId];
+    setExpandedDomains(prev => ({ ...prev, [userId]: !isOpen }));
+    if (!isOpen && userDomainIds[userId] === undefined) {
+      loadUserDomains(userId);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -474,7 +527,8 @@ export function AdminPage() {
         ) : (
           <div className="divide-y divide-border">
             {users.map((u) => (
-              <div key={u.id} className="flex items-center gap-4 px-5 py-4 flex-wrap">
+              <div key={u.id}>
+              <div className="flex items-center gap-4 px-5 py-4 flex-wrap">
                 <div className="w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0">
                   {u.isAdmin ? (
                     <Shield className="w-4 h-4 text-violet-600" />
@@ -541,15 +595,31 @@ export function AdminPage() {
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs shrink-0"
-                    onClick={() => setTier(u.id, "free")}
-                    disabled={updating === u.id}
-                  >
-                    {updating === u.id ? "Downgrading…" : "Downgrade"}
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={`h-8 text-xs gap-1.5 ${
+                        expandedDomains[u.id]
+                          ? "border-violet-400 dark:border-violet-600 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300"
+                          : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+                      }`}
+                      onClick={() => toggleDomainPanel(u.id)}
+                    >
+                      <Globe className="w-3 h-3" />
+                      Domain Access
+                      {expandedDomains[u.id] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs shrink-0"
+                      onClick={() => setTier(u.id, "free")}
+                      disabled={updating === u.id}
+                    >
+                      {updating === u.id ? "Downgrading…" : "Downgrade"}
+                    </Button>
+                  </div>
                 )}
 
                 <Button
@@ -562,6 +632,60 @@ export function AdminPage() {
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
+              </div>
+              {/* end flex row */}
+
+              {/* Domain assignment panel — only for premium users */}
+              {u.tier === "premium" && expandedDomains[u.id] && (
+                <div className="mx-5 mb-4 rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                      Domain Access for {u.email || u.username}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {(userDomainIds[u.id] ?? []).length === 0
+                        ? "All domains allowed (no restriction)"
+                        : `${(userDomainIds[u.id] ?? []).length} domain${(userDomainIds[u.id] ?? []).length !== 1 ? "s" : ""} assigned`}
+                    </p>
+                  </div>
+                  {userDomainIds[u.id] === undefined ? (
+                    <p className="text-xs text-muted-foreground">Loading…</p>
+                  ) : allDomains.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No domains configured yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {allDomains.map((d) => {
+                        const assigned = (userDomainIds[u.id] ?? []).includes(d.id);
+                        const isToggling = togglingDomain === `${u.id}-${d.id}`;
+                        return (
+                          <button
+                            key={d.id}
+                            onClick={() => toggleUserDomain(u.id, d.id, assigned)}
+                            disabled={isToggling}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-medium border transition-all ${
+                              assigned
+                                ? "bg-violet-600 text-white border-violet-600 hover:bg-violet-700"
+                                : "bg-background text-muted-foreground border-border hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-600"
+                            }`}
+                          >
+                            {isToggling ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : assigned ? (
+                              <Lock className="w-3 h-3" />
+                            ) : (
+                              <Unlock className="w-3 h-3" />
+                            )}
+                            @{d.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground mt-3">
+                    Highlighted domains are accessible to this user. If none are selected, they can use all domains.
+                  </p>
+                </div>
+              )}
               </div>
             ))}
           </div>

@@ -15,6 +15,7 @@ export interface UserProfile {
   tier: Tier;
   isAdmin: boolean;
   premiumExpiresAt: string | null;
+  allowedDomainIds: number[];
 }
 
 function sessionKey(clerkId: string) {
@@ -70,6 +71,7 @@ export function useUserTier() {
         tier: data.tier,
         isAdmin: data.isAdmin,
         premiumExpiresAt: data.premiumExpiresAt ?? null,
+        allowedDomainIds: data.allowedDomainIds ?? [],
       });
     } finally {
       setLoading(false);
@@ -92,6 +94,7 @@ export function useUserTier() {
     tier: profile?.tier ?? "free",
     isAdmin: profile?.isAdmin ?? false,
     premiumExpiresAt: profile?.premiumExpiresAt ?? null,
+    allowedDomainIds: profile?.allowedDomainIds ?? [],
     refresh: sync,
   };
 }
