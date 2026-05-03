@@ -259,8 +259,8 @@ export function InboxPage() {
       })
     : tierFiltered;
 
-  // ─── Premium view with assigned domains ────────────────────────────────────
-  const isPremiumWithDomains = tier === "premium" && allowedDomainIds.length > 0 && domains.length > 0 && usePremiumView;
+  // ─── Premium view ────────────────────────────────────────────────────────────
+  const isPremiumWithDomains = tier === "premium" && domains.length > 0 && usePremiumView;
 
   if (isPremiumWithDomains) {
     const activeDomain = selectedDomain || domains[0]?.name || "";
@@ -584,7 +584,7 @@ export function InboxPage() {
   }
 
   // ─── Standard view (free users + premium with no domain restrictions) ───────
-  const canSwitchToPremium = tier === "premium" && allowedDomainIds.length > 0 && domains.length > 0;
+  const canSwitchToPremium = tier === "premium" && domains.length > 0;
 
   return (
     <div className="h-full flex flex-col min-h-[100dvh]">
