@@ -22,6 +22,8 @@ const DOMAIN_ACCENT = [
   "from-slate-500 to-slate-700",
 ];
 
+const VIEW_MODE_KEY = "weyn_premium_view_mode";
+
 export function InboxPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -38,8 +40,19 @@ export function InboxPage() {
   const [search, setSearch] = useState("");
   const [directInput, setDirectInput] = useState("");
   const [clearing, setClearing] = useState(false);
+  const [usePremiumView, setUsePremiumView] = useState<boolean>(() => {
+    try { return localStorage.getItem(VIEW_MODE_KEY) !== "standard"; } catch { return true; }
+  });
   const esRef = useRef<EventSource | null>(null);
   const domainRef = useRef<HTMLDivElement>(null);
+
+  const toggleView = () => {
+    setUsePremiumView(prev => {
+      const next = !prev;
+      try { localStorage.setItem(VIEW_MODE_KEY, next ? "premium" : "standard"); } catch {}
+      return next;
+    });
+  };
 
   const { data: domainsData } = useListDomains();
   const allDomains = domainsData?.domains ?? [];
@@ -247,7 +260,7 @@ export function InboxPage() {
     : tierFiltered;
 
   // ─── Premium view with assigned domains ────────────────────────────────────
-  const isPremiumWithDomains = tier === "premium" && allowedDomainIds.length > 0 && domains.length > 0;
+  const isPremiumWithDomains = tier === "premium" && allowedDomainIds.length > 0 && domains.length > 0 && usePremiumView;
 
   if (isPremiumWithDomains) {
     const activeDomain = selectedDomain || domains[0]?.name || "";
@@ -273,18 +286,29 @@ export function InboxPage() {
               </div>
               <h1 className="text-xl font-extrabold tracking-tight">WEYN EMAILS</h1>
             </div>
-            <div className="flex flex-col items-end gap-1 pt-0.5">
-              {liveConnected && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/20 rounded-full px-2.5 py-0.5">
-                  <Radio className="w-2.5 h-2.5 animate-pulse" />
-                  Live
-                </span>
-              )}
-              {unread > 0 && (
-                <span className="inline-flex items-center text-[11px] font-bold bg-white/30 rounded-full px-2.5 py-0.5">
-                  {unread} new
-                </span>
-              )}
+            <div className="flex flex-col items-end gap-2 pt-0.5">
+              <div className="flex items-center gap-1.5">
+                {liveConnected && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/20 rounded-full px-2.5 py-0.5">
+                    <Radio className="w-2.5 h-2.5 animate-pulse" />
+                    Live
+                  </span>
+                )}
+                {unread > 0 && (
+                  <span className="inline-flex items-center text-[11px] font-bold bg-white/30 rounded-full px-2.5 py-0.5">
+                    {unread} new
+                  </span>
+                )}
+              </div>
+              {/* View toggle */}
+              <button
+                onClick={toggleView}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-black/20 hover:bg-black/30 rounded-full px-3 py-1 transition-colors"
+                title="Switch to standard view"
+              >
+                <span className="w-3.5 h-3.5 rounded-full bg-white/80 flex items-center justify-center text-[8px] font-bold text-black">P</span>
+                Switch view
+              </button>
             </div>
           </div>
         </div>
@@ -560,6 +584,8 @@ export function InboxPage() {
   }
 
   // ─── Standard view (free users + premium with no domain restrictions) ───────
+  const canSwitchToPremium = tier === "premium" && allowedDomainIds.length > 0 && domains.length > 0;
+
   return (
     <div className="h-full flex flex-col min-h-[100dvh]">
       {/* Top bar */}
@@ -652,6 +678,22 @@ export function InboxPage() {
                   Sign in for Premium →
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Switch back to Premium view banner */}
+          {canSwitchToPremium && (
+            <div className="flex items-center gap-3 rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 px-4 py-2.5">
+              <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
+              <p className="text-xs text-violet-700 dark:text-violet-300 flex-1">
+                You're viewing the <span className="font-semibold">standard layout</span>. Switch back to your premium inbox.
+              </p>
+              <button
+                onClick={toggleView}
+                className="text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 transition-colors rounded-full px-3 py-1 shrink-0 whitespace-nowrap"
+              >
+                Premium view →
+              </button>
             </div>
           )}
 
