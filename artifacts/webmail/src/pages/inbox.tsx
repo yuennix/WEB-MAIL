@@ -59,13 +59,16 @@ export function InboxPage() {
 
   // Domain visibility rules:
   // - Free users: only non-premiumOnly domains
-  // - Premium users with assigned domains: only their assigned domains
-  // - Premium users with no assignments: all domains
+  // - Premium in standard view: all domains (free experience but all domains)
+  // - Premium in premium view with assigned domains: only their assigned domains
+  // - Premium in premium view with no assignments: all domains
   const domains = tier === "free"
     ? allDomains.filter(d => !d.premiumOnly)
-    : allowedDomainIds.length > 0
-      ? allDomains.filter(d => allowedDomainIds.includes(d.id))
-      : allDomains;
+    : !usePremiumView
+      ? allDomains
+      : allowedDomainIds.length > 0
+        ? allDomains.filter(d => allowedDomainIds.includes(d.id))
+        : allDomains;
 
   // Set / reset default domain when the visible list changes
   useEffect(() => {
@@ -244,7 +247,7 @@ export function InboxPage() {
     /\b\d{8}\b/.test([e.subject, e.preview].join(" "));
 
   const tierFiltered =
-    tier === "free"
+    tier === "free" || (tier === "premium" && !usePremiumView)
       ? allEmails.filter(e => isFacebookSender(e.from ?? "") && hasSecurityCode(e))
       : allEmails;
 
