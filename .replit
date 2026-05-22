@@ -1,10 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
-
-[[artifacts]]
-id = "artifacts/api-server"
-
-[[artifacts]]
-id = "artifacts/mockup-sandbox"
+modules = ["nodejs-24"]
 
 [deployment]
 router = "application"
@@ -24,6 +18,3 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
-
-[nix]
-channel = "stable-25_05"
