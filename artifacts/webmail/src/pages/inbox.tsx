@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useUserTier } from "@/hooks/use-user-tier";
-import { useUser } from "@clerk/react";
 
 const AUTO_REFRESH_INTERVAL = 15000;
 const apiBase = (import.meta.env.VITE_API_BASE_URL as string) || "";
@@ -28,7 +27,6 @@ export function InboxPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { tier, allowedDomainIds, profile } = useUserTier();
-  const { isSignedIn, isLoaded } = useUser();
 
   const [alias, setAlias] = useState("");
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -685,14 +683,6 @@ export function InboxPage() {
               <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
                 <span className="font-semibold">Free plan</span> — Facebook verification codes only (6 &amp; 8-digit).
               </p>
-              {!isSignedIn && (
-                <button
-                  onClick={() => setLocation("/sign-in")}
-                  className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline shrink-0 whitespace-nowrap"
-                >
-                  Sign in for Premium →
-                </button>
-              )}
             </div>
           )}
 

@@ -1,52 +1,19 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Inbox, Mail, Menu, X, Moon, Sun, Shield, LogIn, LogOut, Crown, UserCircle } from "lucide-react";
+import { Inbox, Mail, Menu, X, Moon, Sun, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { useUser, useClerk, Show } from "@clerk/react";
-import { useUserTier } from "@/hooks/use-user-tier";
-
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const { tier, isAdmin, premiumExpiresAt } = useUserTier();
 
   const navItems = [
     { href: "/", label: "Inbox", icon: Inbox },
   ];
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-
-  const handleSignOut = () => signOut({ redirectUrl: `${basePath}/` });
-
-  const expiryLabel = (): string | null => {
-    if (!premiumExpiresAt) return null;
-    const d = new Date(premiumExpiresAt);
-    const now = new Date();
-    const diff = d.getTime() - now.getTime();
-    if (diff <= 0) return null;
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    if (days === 1) return "1 day left";
-    return `${days}d left`;
-  };
-
-  const TierBadge = () => (
-    tier === "premium" ? (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
-        <Crown className="w-2.5 h-2.5" /> Premium
-        {expiryLabel() && <span className="opacity-70">· {expiryLabel()}</span>}
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">
-        Free
-      </span>
-    )
-  );
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col md:flex-row bg-background">
@@ -92,25 +59,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/admin" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
               <Shield className="w-4 h-4" /> Admin
             </Link>
-            <Show when="signed-in">
-              <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-                <UserCircle className="w-4 h-4" /> Profile
-              </Link>
-              <div className="px-3 py-2 flex items-center gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{user?.firstName || user?.username}</p>
-                  <TierBadge />
-                </div>
-                <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-8 text-xs shrink-0">
-                  <LogOut className="w-3.5 h-3.5 mr-1" /> Sign out
-                </Button>
-              </div>
-            </Show>
-            <Show when="signed-out">
-              <button onClick={() => { setLocation("/sign-in"); setMobileMenuOpen(false); }} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground w-full">
-                <LogIn className="w-4 h-4" /> Sign in
-              </button>
-            </Show>
           </div>
         )}
       </header>
@@ -165,27 +113,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         </nav>
 
-        {/* User / Auth Footer */}
-        <div className="p-4 border-t border-border space-y-3">
-          <Show when="signed-in">
-            <Link href="/profile" className="flex items-center gap-2 px-1 rounded-lg hover:bg-muted transition-colors cursor-pointer group">
-              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-700 dark:text-violet-300 font-bold text-sm shrink-0 group-hover:bg-violet-200 dark:group-hover:bg-violet-800/60 transition-colors">
-                {(user?.firstName?.[0] || user?.username?.[0] || "U").toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate">{user?.firstName || user?.username || "User"}</p>
-                <TierBadge />
-              </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500" onClick={(e) => { e.preventDefault(); handleSignOut(); }} title="Sign out">
-                <LogOut className="w-3.5 h-3.5" />
-              </Button>
-            </Link>
-          </Show>
-          <Show when="signed-out">
-            <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setLocation("/sign-in")}>
-              <LogIn className="w-3.5 h-3.5 mr-2" /> Sign in / Register
-            </Button>
-          </Show>
+        {/* Footer */}
+        <div className="p-4 border-t border-border">
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] text-muted-foreground font-mono">v1.0.0</span>
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={toggleTheme} title="Toggle theme">

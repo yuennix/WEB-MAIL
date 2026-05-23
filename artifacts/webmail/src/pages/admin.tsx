@@ -53,8 +53,6 @@ export function AdminPage() {
   const [fetching, setFetching] = useState(false);
   const [updating, setUpdating] = useState<number | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<Record<number, string>>({});
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [importEmails, setImportEmails] = useState("");
   const [importing, setImporting] = useState(false);
@@ -201,27 +199,6 @@ export function AdminPage() {
     }
   };
 
-  const syncFromClerk = async () => {
-    setSyncing(true);
-    setSyncMsg("");
-    try {
-      const res = await fetch(`${apiBase}/api/admin/sync-from-clerk`, {
-        method: "POST",
-        headers: { "x-admin-password": storedPassword() },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSyncMsg(`Synced: ${data.created} new, ${data.skipped} already existed`);
-        fetchUsers();
-      } else {
-        setSyncMsg(data.error ?? "Sync failed");
-      }
-    } catch {
-      setSyncMsg("Could not reach server");
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const importUsers = async () => {
     const emails = importEmails
@@ -266,7 +243,6 @@ export function AdminPage() {
         const parts: string[] = [];
         if (data.created > 0) parts.push(`✅ ${data.created} added`);
         if (data.skipped > 0) parts.push(`${data.skipped} already existed`);
-        if (data.notInClerk?.length) parts.push(`❌ Not registered in Clerk (rejected): ${data.notInClerk.join(", ")}`);
         if (invalid.length > 0) parts.push(`❌ Invalid domain/format (rejected): ${invalid.map((r) => `${r.email} — ${r.reason}`).join(", ")}`);
         setImportMsg(parts.join(" · "));
         setImportEmails("");
@@ -372,15 +348,6 @@ export function AdminPage() {
           <h1 className="text-2xl font-bold">Admin Panel</h1>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={syncFromClerk}
-            disabled={syncing || fetching}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Syncing…" : "Sync from Clerk"}
-          </Button>
           <Button variant="outline" size="sm" onClick={() => fetchUsers()} disabled={fetching}>
             <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
             Refresh
@@ -441,7 +408,7 @@ export function AdminPage() {
           <div>
             <p className="text-sm font-semibold text-foreground mb-1">Add users by email</p>
             <p className="text-xs text-muted-foreground">
-              Paste email addresses below (one per line or comma-separated). Copy them from your Clerk dashboard.
+              Paste email addresses below (one per line or comma-separated).
             </p>
           </div>
           <textarea
@@ -472,15 +439,6 @@ export function AdminPage() {
         </div>
       )}
 
-      {syncMsg && (
-        <div className={`text-sm px-4 py-2 rounded-lg border ${
-          syncMsg.startsWith("Synced")
-            ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
-            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-        }`}>
-          {syncMsg}
-        </div>
-      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
