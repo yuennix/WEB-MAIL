@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider, useClerk } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useClerk } from "@clerk/react";
 import { Layout } from "@/components/layout";
 import { InboxPage } from "@/pages/inbox";
 import { DomainsPage } from "@/pages/domains";
